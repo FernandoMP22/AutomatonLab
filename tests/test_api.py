@@ -34,13 +34,21 @@ def comprobar_respuesta(respuesta, cadena, metodo, aceptada):
 
     contenido = respuesta.json()
 
-    assert set(contenido) == {"cadena", "metodo", "aceptada", "afd"}
+    assert set(contenido) == {
+        "cadena",
+        "metodo",
+        "aceptada",
+        "afd",
+        "recorrido_afd",
+    }
+
     assert contenido["cadena"] == cadena
     assert contenido["metodo"] == metodo
     assert contenido["aceptada"] is aceptada
 
     if metodo == "afnde":
         assert contenido["afd"] is None
+        assert contenido["recorrido_afd"] is None
 
     else:
         afd = AFDSalida.model_validate(contenido["afd"])
@@ -57,9 +65,40 @@ def comprobar_respuesta(respuesta, cadena, metodo, aceptada):
         assert afd.estado_trampa == por_componentes[()]
         assert len(afd.transiciones) == len(afd.estados) * len(afd.alfabeto)
 
+        recorrido = contenido["recorrido_afd"]
+
+        assert len(recorrido) == len(cadena) + 1
+
+        assert recorrido[0] == {
+            "posicion": 0,
+            "simbolo": None,
+            "estado": afd.estado_inicial,
+        }
+
+        # Recorridos esperados para las cadenas de este archivo de pruebas.
+        componentes_esperados = {
+            "": [("q0", "q1")],
+            "0": [("q0", "q1"), ("q2",)],
+            "1": [("q0", "q1"), ()],
+            "00": [("q0", "q1"), ("q2",), ()],
+        }
+
+        estados_esperados = [
+            por_componentes[componentes]
+            for componentes in componentes_esperados[cadena]
+        ]
+
+        assert [paso["estado"] for paso in recorrido] == estados_esperados
+
+        for posicion, simbolo in enumerate(cadena, start=1):
+            assert recorrido[posicion]["posicion"] == posicion
+            assert recorrido[posicion]["simbolo"] == simbolo
+
+        estado_final = recorrido[-1]["estado"]
+
+        assert (estado_final in afd.estados_finales) is aceptada
 
 with TestClient(app) as cliente:
-    # Probar cadenas aceptadas y rechazadas con ambos metodos.
     casos = [
         ("0", True),
         ("1", False),
@@ -85,9 +124,9 @@ with TestClient(app) as cliente:
                 resultado_esperado,
             )
 
-    print("Analisis y estructura de respuesta con ambos metodos: correcto.")
+    print("Analisis y recorrido con ambos metodos: correcto.")
 
-    # Probar aceptacion de la cadena vacia mediante epsilon.
+    # Comprobar aceptacion de la cadena vacia mediante epsilon.
     for metodo in ("afnde", "afd"):
         datos = deepcopy(datos_validos)
         datos["estados_finales"] = ["q1"]
@@ -107,7 +146,7 @@ with TestClient(app) as cliente:
 
     print("Aceptacion de cadena vacia mediante epsilon: correcto.")
 
-    # Probar errores en las reglas y en los tipos de entrada.
+    # Comprobar solicitudes invalidas.
     casos_invalidos = [
         (
             {"cadena": "2"},
@@ -137,10 +176,7 @@ with TestClient(app) as cliente:
         )
 
         assert respuesta.status_code == 422, respuesta.text
-
-        contenido = respuesta.json()
-
-        assert "detail" in contenido
+        assert "detail" in respuesta.json()
         assert mensaje_esperado in respuesta.text, respuesta.text
 
     print("Errores de entrada con HTTP 422: correcto.")

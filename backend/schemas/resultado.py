@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from backend.schemas.afd import AFDSalida
+from backend.schemas.recorrido import PasoAFDSalida
 
 
 class ResultadoAnalisis(BaseModel):
@@ -10,3 +11,4 @@ class ResultadoAnalisis(BaseModel):
     metodo: Literal["afnde", "afd"]
     aceptada: bool
     afd: AFDSalida | None = None
+    recorrido_afd: list[PasoAFDSalida] | None = None
