@@ -3,6 +3,7 @@ from copy import deepcopy
 from fastapi.testclient import TestClient
 
 from backend.main import app
+from backend.schemas.afd import AFDSalida
 
 
 datos_validos = {
@@ -28,6 +29,35 @@ datos_validos = {
 }
 
 
+def comprobar_respuesta(respuesta, cadena, metodo, aceptada):
+    assert respuesta.status_code == 200, respuesta.text
+
+    contenido = respuesta.json()
+
+    assert set(contenido) == {"cadena", "metodo", "aceptada", "afd"}
+    assert contenido["cadena"] == cadena
+    assert contenido["metodo"] == metodo
+    assert contenido["aceptada"] is aceptada
+
+    if metodo == "afnde":
+        assert contenido["afd"] is None
+
+    else:
+        afd = AFDSalida.model_validate(contenido["afd"])
+
+        assert afd.estado_inicial == "D0"
+        assert afd.estados[0].componentes == ["q0", "q1"]
+        assert afd.alfabeto == ["0", "1"]
+
+        por_componentes = {
+            tuple(estado.componentes): estado.id
+            for estado in afd.estados
+        }
+
+        assert afd.estado_trampa == por_componentes[()]
+        assert len(afd.transiciones) == len(afd.estados) * len(afd.alfabeto)
+
+
 with TestClient(app) as cliente:
     # Probar cadenas aceptadas y rechazadas con ambos metodos.
     casos = [
@@ -48,15 +78,14 @@ with TestClient(app) as cliente:
                 json=datos,
             )
 
-            assert respuesta.status_code == 200, respuesta.text
+            comprobar_respuesta(
+                respuesta,
+                cadena,
+                metodo,
+                resultado_esperado,
+            )
 
-            assert respuesta.json() == {
-                "cadena": cadena,
-                "metodo": metodo,
-                "aceptada": resultado_esperado,
-            }
-
-    print("Aceptacion y rechazo con ambos metodos: correcto.")
+    print("Analisis y estructura de respuesta con ambos metodos: correcto.")
 
     # Probar aceptacion de la cadena vacia mediante epsilon.
     for metodo in ("afnde", "afd"):
@@ -70,13 +99,11 @@ with TestClient(app) as cliente:
             json=datos,
         )
 
-        assert respuesta.status_code == 200, respuesta.text
+        comprobar_respuesta(respuesta, "", metodo, True)
 
-        assert respuesta.json() == {
-            "cadena": "",
-            "metodo": metodo,
-            "aceptada": True,
-        }
+        if metodo == "afd":
+            contenido_afd = respuesta.json()["afd"]
+            assert "D0" in contenido_afd["estados_finales"]
 
     print("Aceptacion de cadena vacia mediante epsilon: correcto.")
 
