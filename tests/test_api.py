@@ -40,17 +40,49 @@ def comprobar_respuesta(respuesta, cadena, metodo, aceptada):
         "aceptada",
         "afd",
         "recorrido_afd",
+        "recorrido_afnde",
     }
 
     assert contenido["cadena"] == cadena
     assert contenido["metodo"] == metodo
     assert contenido["aceptada"] is aceptada
 
+    # Estados activos esperados para el automata de estas pruebas.
+    componentes_esperados = {
+        "": [("q0", "q1")],
+        "0": [("q0", "q1"), ("q2",)],
+        "1": [("q0", "q1"), ()],
+        "00": [("q0", "q1"), ("q2",), ()],
+    }
+
     if metodo == "afnde":
         assert contenido["afd"] is None
         assert contenido["recorrido_afd"] is None
 
+        recorrido = contenido["recorrido_afnde"]
+        pasos_esperados = []
+
+        for posicion, componentes in enumerate(
+            componentes_esperados[cadena]
+        ):
+            simbolo = None
+
+            if posicion > 0:
+                simbolo = cadena[posicion - 1]
+
+            pasos_esperados.append(
+                {
+                    "posicion": posicion,
+                    "simbolo": simbolo,
+                    "estados": list(componentes),
+                }
+            )
+
+        assert recorrido == pasos_esperados
+
     else:
+        assert contenido["recorrido_afnde"] is None
+
         afd = AFDSalida.model_validate(contenido["afd"])
 
         assert afd.estado_inicial == "D0"
@@ -73,14 +105,6 @@ def comprobar_respuesta(respuesta, cadena, metodo, aceptada):
             "posicion": 0,
             "simbolo": None,
             "estado": afd.estado_inicial,
-        }
-
-        # Recorridos esperados para las cadenas de este archivo de pruebas.
-        componentes_esperados = {
-            "": [("q0", "q1")],
-            "0": [("q0", "q1"), ("q2",)],
-            "1": [("q0", "q1"), ()],
-            "00": [("q0", "q1"), ("q2",), ()],
         }
 
         estados_esperados = [

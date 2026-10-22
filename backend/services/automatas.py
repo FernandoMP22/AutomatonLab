@@ -1,9 +1,11 @@
 from backend.algoritmos.conversion import convertir_afnde_a_afd
-from backend.algoritmos.recorrido import simular_afd_con_recorrido
-from backend.algoritmos.simulacion import simular_afnde
+from backend.algoritmos.recorrido import (
+    simular_afd_con_recorrido,
+    simular_afnde_con_recorrido,
+)
 from backend.modelos.afnde import AFNDE
 from backend.schemas.automata import AutomataEntrada
-from backend.schemas.recorrido import PasoAFDSalida
+from backend.schemas.recorrido import PasoAFDSalida, PasoAFNDESalida
 from backend.schemas.resultado import ResultadoAnalisis
 from backend.services.serializacion import serializar_afd
 
@@ -30,10 +32,26 @@ def analizar_automata(entrada: AutomataEntrada) -> ResultadoAnalisis:
     afnde = crear_afnde(entrada)
 
     afd_salida = None
-    recorrido_salida = None
+    recorrido_afd_salida = None
+    recorrido_afnde_salida = None
 
     if entrada.metodo == "afnde":
-        aceptada = simular_afnde(afnde, entrada.cadena)
+        resultado = simular_afnde_con_recorrido(
+            afnde,
+            entrada.cadena,
+        )
+
+        aceptada = resultado["aceptada"]
+        recorrido_afnde_salida = []
+
+        for paso in resultado["pasos"]:
+            recorrido_afnde_salida.append(
+                PasoAFNDESalida(
+                    posicion=paso["posicion"],
+                    simbolo=paso["simbolo"],
+                    estados=sorted(paso["estados"]),
+                )
+            )
 
     else:
         afd = convertir_afnde_a_afd(afnde)
@@ -50,7 +68,7 @@ def analizar_automata(entrada: AutomataEntrada) -> ResultadoAnalisis:
             identificadores[componentes] = estado.id
 
         # Transformar los pasos internos a schemas de salida.
-        recorrido_salida = []
+        recorrido_afd_salida = []
 
         for paso in resultado["pasos"]:
             estado_id = None
@@ -58,7 +76,7 @@ def analizar_automata(entrada: AutomataEntrada) -> ResultadoAnalisis:
             if paso["estado"] is not None:
                 estado_id = identificadores[paso["estado"]]
 
-            recorrido_salida.append(
+            recorrido_afd_salida.append(
                 PasoAFDSalida(
                     posicion=paso["posicion"],
                     simbolo=paso["simbolo"],
@@ -71,5 +89,6 @@ def analizar_automata(entrada: AutomataEntrada) -> ResultadoAnalisis:
         metodo=entrada.metodo,
         aceptada=aceptada,
         afd=afd_salida,
-        recorrido_afd=recorrido_salida,
+        recorrido_afd=recorrido_afd_salida,
+        recorrido_afnde=recorrido_afnde_salida,
     )
