@@ -1,0 +1,26 @@
+<div class="diagrama">
+  <div
+    #contenedor
+    class="lienzo"
+    role="img"
+    aria-label="Diagrama del autómata con estados y transiciones"
+  ></div>
+
+  <div class="herramientas">
+    <button
+      mat-stroked-button
+      type="button"
+      (click)="ajustarVista()"
+    >
+      Ajustar vista
+    </button>
+  </div>
+
+  <p class="leyenda">
+    <strong class="leyenda-inicial">
+      Estado inicial: {{ automata().estado_inicial }} (azul).
+    </strong>
+    Los estados finales tienen doble borde.
+    Puedes arrastrar los estados y utilizar la rueda para acercar o alejar.
+  </p>
+</div>

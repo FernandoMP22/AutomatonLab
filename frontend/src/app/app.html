@@ -47,9 +47,21 @@
         </mat-card-header>
 
         <mat-card-content>
-          <div class="espacio-diagrama">
-            <p>El diagrama del autómata original aparecerá aquí.</p>
-          </div>
+          @if (automataAnalizado(); as automata) {
+            @defer (on immediate) {
+              <app-diagrama-automata
+                [automata]="automata"
+              ></app-diagrama-automata>
+            } @loading {
+              <p role="status">Cargando el diagrama…</p>
+            } @error {
+              <p>No se pudo cargar el componente del diagrama.</p>
+            }
+          } @else {
+            <div class="espacio-diagrama">
+              <p>Analiza una cadena para dibujar el autómata original.</p>
+            </div>
+          }
         </mat-card-content>
       </mat-card>
 

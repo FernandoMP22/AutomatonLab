@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatToolbarModule } from '@angular/material/toolbar';
 
+import { DiagramaAutomata } from './components/diagrama-automata/diagrama-automata';
 import { FormularioAutomata } from './components/formulario-automata/formulario-automata';
 import type {
   AutomataEntrada,
@@ -16,6 +17,7 @@ import { AutomatasService } from './services/automatas';
     MatCardModule,
     MatToolbarModule,
     FormularioAutomata,
+    DiagramaAutomata,
   ],
   templateUrl: './app.html',
   styleUrl: './app.css',
@@ -27,6 +29,7 @@ export class App {
   protected readonly cargando = signal(false);
   protected readonly resultado = signal<ResultadoAnalisis | null>(null);
   protected readonly erroresApi = signal<string[]>([]);
+  protected readonly automataAnalizado = signal<AutomataEntrada | null>(null);
 
   protected analizar(entrada: AutomataEntrada): void {
     if (this.cargando()) {
@@ -34,11 +37,13 @@ export class App {
     }
 
     this.resultado.set(null);
+    this.automataAnalizado.set(null);
     this.erroresApi.set([]);
     this.cargando.set(true);
 
     this.automatasService.analizar(entrada).subscribe({
       next: (respuesta) => {
+        this.automataAnalizado.set(entrada);
         this.resultado.set(respuesta);
         this.cargando.set(false);
       },
