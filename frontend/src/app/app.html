@@ -30,7 +30,10 @@
             que deseas analizar.
           </p>
 
-          <app-formulario-automata></app-formulario-automata>
+          <app-formulario-automata
+            [cargando]="cargando()"
+            (analizarSolicitado)="analizar($event)"
+          ></app-formulario-automata>
         </mat-card-content>
       </mat-card>
     </section>
@@ -78,10 +81,44 @@
       </mat-card-header>
 
       <mat-card-content>
-        <p>
-          Después de analizar una cadena podrás consultar si fue aceptada
-          y avanzar o retroceder por su recorrido.
-        </p>
+        @if (cargando()) {
+          <p role="status">Analizando la cadena…</p>
+        } @else if (erroresApi().length > 0) {
+          <div role="alert">
+            <h3>No se pudo realizar el análisis</h3>
+
+            <ul>
+              @for (error of erroresApi(); track $index) {
+                <li>{{ error }}</li>
+              }
+            </ul>
+          </div>
+        } @else if (resultado(); as respuesta) {
+          <div role="status">
+            <h3>
+              {{ respuesta.aceptada ? 'Cadena aceptada' : 'Cadena rechazada' }}
+            </h3>
+
+            <p>
+              <strong>Cadena analizada:</strong>
+              {{ respuesta.cadena === '' ? 'ε (cadena vacía)' : respuesta.cadena }}
+            </p>
+
+            <p>
+              <strong>Método:</strong>
+              {{
+                respuesta.metodo === 'afd'
+                  ? 'Conversión a AFD y simulación'
+                  : 'Simulación AFND-ε'
+              }}
+            </p>
+          </div>
+        } @else {
+          <p>
+            Completa la configuración y pulsa Analizar cadena
+            para consultar el resultado.
+          </p>
+        }
       </mat-card-content>
     </mat-card>
   </section>

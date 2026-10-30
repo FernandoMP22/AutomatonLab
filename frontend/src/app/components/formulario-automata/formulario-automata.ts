@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import {
   FormArray,
   FormControl,
@@ -30,6 +30,9 @@ import { validarAutomata } from '../../validators/automata';
   styleUrl: './formulario-automata.css',
 })
 export class FormularioAutomata {
+  readonly cargando = input(false);
+  readonly analizarSolicitado = output<AutomataEntrada>();
+
   protected readonly formulario = new FormGroup({
     numero_nodos: new FormControl(3, {
       nonNullable: true,
@@ -95,9 +98,7 @@ export class FormularioAutomata {
   }
 
   protected get erroresValidacion(): string[] {
-    const entrada = this.construirEntrada();
-
-    return validarAutomata(entrada);
+    return validarAutomata(this.construirEntrada());
   }
 
   protected agregarTransicion(): void {
@@ -106,6 +107,20 @@ export class FormularioAutomata {
 
   protected eliminarTransicion(indice: number): void {
     this.transiciones.removeAt(indice);
+  }
+
+  protected analizar(): void {
+    this.formulario.markAllAsTouched();
+
+    if (
+      this.cargando() ||
+      this.formulario.invalid ||
+      this.erroresValidacion.length > 0
+    ) {
+      return;
+    }
+
+    this.analizarSolicitado.emit(this.construirEntrada());
   }
 
   private construirEntrada(): AutomataEntrada {

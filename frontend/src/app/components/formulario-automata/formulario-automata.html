@@ -1,4 +1,8 @@
-<div class="formulario" [formGroup]="formulario">
+<form
+  class="formulario"
+  [formGroup]="formulario"
+  (ngSubmit)="analizar()"
+>
   <mat-form-field appearance="outline">
     <mat-label>Número de nodos</mat-label>
 
@@ -190,4 +194,12 @@
       </ul>
     </section>
   }
-</div>
+
+  <button
+    mat-flat-button
+    type="submit"
+    [disabled]="cargando() || formulario.invalid || errores.length > 0"
+  >
+    {{ cargando() ? 'Analizando…' : 'Analizar cadena' }}
+  </button>
+</form>
