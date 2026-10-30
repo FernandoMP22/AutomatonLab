@@ -173,4 +173,21 @@
       Agregar transición
     </button>
   </section>
+
+  @let errores = erroresValidacion;
+
+  @if (errores.length > 0) {
+    <section
+      class="errores-validacion"
+      aria-labelledby="titulo-errores"
+    >
+      <h3 id="titulo-errores">Revisa la configuración</h3>
+
+      <ul>
+        @for (error of errores; track $index) {
+          <li>{{ error }}</li>
+        }
+      </ul>
+    </section>
+  }
 </div>

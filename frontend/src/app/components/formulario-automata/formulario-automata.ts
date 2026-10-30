@@ -11,7 +11,11 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 
-import type { MetodoAnalisis } from '../../models/automata';
+import type {
+  AutomataEntrada,
+  MetodoAnalisis,
+} from '../../models/automata';
+import { validarAutomata } from '../../validators/automata';
 
 @Component({
   selector: 'app-formulario-automata',
@@ -71,27 +75,29 @@ export class FormularioAutomata {
   });
 
   protected get estadosDisponibles(): string[] {
-    const texto = this.formulario.controls.estados.value;
+    const estados = this.separarLista(
+      this.formulario.controls.estados.value,
+    ).filter((estado) => estado.length > 0);
 
-    return texto
-      .split(',')
-      .map((estado) => estado.trim())
-      .filter((estado) => estado.length > 0);
+    return Array.from(new Set(estados));
   }
 
   protected get simbolosDisponibles(): string[] {
-    const texto = this.formulario.controls.alfabeto.value;
+    const simbolos = this.separarLista(
+      this.formulario.controls.alfabeto.value,
+    ).filter((simbolo) => simbolo.length > 0);
 
-    const simbolos = texto
-      .split(',')
-      .map((simbolo) => simbolo.trim())
-      .filter((simbolo) => simbolo.length > 0);
-
-    return simbolos.concat('ε');
+    return Array.from(new Set(simbolos.concat('ε')));
   }
 
   protected get transiciones() {
     return this.formulario.controls.transiciones;
+  }
+
+  protected get erroresValidacion(): string[] {
+    const entrada = this.construirEntrada();
+
+    return validarAutomata(entrada);
   }
 
   protected agregarTransicion(): void {
@@ -100,6 +106,27 @@ export class FormularioAutomata {
 
   protected eliminarTransicion(indice: number): void {
     this.transiciones.removeAt(indice);
+  }
+
+  private construirEntrada(): AutomataEntrada {
+    const valores = this.formulario.getRawValue();
+
+    return {
+      numero_nodos: valores.numero_nodos,
+      estados: this.separarLista(valores.estados),
+      alfabeto: this.separarLista(valores.alfabeto),
+      estado_inicial: valores.estado_inicial,
+      estados_finales: valores.estados_finales,
+      transiciones: valores.transiciones,
+      cadena: valores.cadena,
+      metodo: valores.metodo,
+    };
+  }
+
+  private separarLista(texto: string): string[] {
+    return texto
+      .split(',')
+      .map((elemento) => elemento.trim());
   }
 
   private crearTransicion(
