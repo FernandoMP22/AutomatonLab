@@ -20,7 +20,9 @@
 
 .herramientas {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 8px;
 }
 
 .leyenda {
@@ -33,4 +35,19 @@
 .leyenda-inicial {
   color: #1565c0;
   font-weight: 700;
+}
+
+.leyenda-trampa {
+  color: #b3261e;
+  font-weight: 700;
+}
+
+.aviso-vista {
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background-color: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+  line-height: 1.6;
 }

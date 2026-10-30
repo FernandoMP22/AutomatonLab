@@ -2,6 +2,7 @@
   <div
     #contenedor
     class="lienzo"
+    [style.height.px]="alturaLienzo()"
     role="img"
     aria-label="Diagrama del autómata con estados y transiciones"
   ></div>
@@ -12,15 +13,42 @@
       type="button"
       (click)="ajustarVista()"
     >
-      Ajustar vista
+      {{ distribucion() === 'niveles' ? 'Vista legible' : 'Ajustar vista' }}
     </button>
+
+    @if (distribucion() === 'niveles') {
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="verTodo()"
+      >
+        Ver todo
+      </button>
+    }
   </div>
+
+  @if (vistaParcial()) {
+    <p class="aviso-vista" role="status">
+      La vista mantiene los nombres legibles y puede mostrar solo una parte
+      del autómata. Arrastra el fondo para recorrerlo o pulsa Ver todo.
+    </p>
+  }
 
   <p class="leyenda">
     <strong class="leyenda-inicial">
-      Estado inicial: {{ automata().estado_inicial }} (azul).
+      Estado inicial:
+      {{ obtenerEtiqueta(automata().estado_inicial) }} (azul).
     </strong>
+
     Los estados finales tienen doble borde.
-    Puedes arrastrar los estados y utilizar la rueda para acercar o alejar.
+
+    @if (estadoTrampa()) {
+      <strong class="leyenda-trampa">
+        El estado trampa ∅ y sus transiciones se muestran en rojo.
+      </strong>
+    }
+
+    Puedes arrastrar los estados, desplazar el fondo y utilizar
+    la rueda para acercar o alejar.
   </p>
 </div>

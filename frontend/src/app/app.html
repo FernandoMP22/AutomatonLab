@@ -1,6 +1,9 @@
 <mat-toolbar class="barra-superior">
   <span>{{ titulo }}</span>
-  <span class="descripcion-barra">Autómatas y lenguajes formales</span>
+
+  <span class="descripcion-barra">
+    Autómatas y lenguajes formales
+  </span>
 </mat-toolbar>
 
 <main class="contenido">
@@ -10,8 +13,8 @@
     <h1>{{ titulo }}</h1>
 
     <p class="introduccion">
-      Construye un AFND-ε, conviértelo a AFD y explora cómo se analiza
-      una cadena paso a paso.
+      Construye un AFND-ε, conviértelo a AFD y explora cómo
+      se analiza una cadena paso a paso.
     </p>
   </header>
 
@@ -20,25 +23,33 @@
       <mat-card appearance="outlined">
         <mat-card-header>
           <mat-card-title>
-            <h2 id="titulo-configuracion">Configuración del autómata</h2>
+            <h2 id="titulo-configuracion">
+              Configuración del autómata
+            </h2>
           </mat-card-title>
         </mat-card-header>
 
         <mat-card-content>
           <p>
-            Define los estados, el alfabeto, las transiciones y la cadena
-            que deseas analizar.
+            Define los estados, el alfabeto y la cadena.
+            Completa las conexiones en la tabla situada
+            debajo de los diagramas.
           </p>
 
           <app-formulario-automata
+            #editor
             [cargando]="cargando()"
             (analizarSolicitado)="analizar($event)"
+            (configuracionBorrada)="limpiarAnalisis()"
           ></app-formulario-automata>
         </mat-card-content>
       </mat-card>
     </section>
 
-    <section class="visualizaciones" aria-label="Diagramas de los autómatas">
+    <section
+      class="visualizaciones"
+      aria-label="Diagramas de los autómatas"
+    >
       <mat-card appearance="outlined">
         <mat-card-header>
           <mat-card-title>
@@ -53,13 +64,20 @@
                 [automata]="automata"
               ></app-diagrama-automata>
             } @loading {
-              <p role="status">Cargando el diagrama…</p>
+              <p role="status">
+                Cargando el diagrama…
+              </p>
             } @error {
-              <p>No se pudo cargar el componente del diagrama.</p>
+              <p>
+                No se pudo cargar el componente del diagrama.
+              </p>
             }
           } @else {
             <div class="espacio-diagrama">
-              <p>Analiza una cadena para dibujar el autómata original.</p>
+              <p>
+                Analiza una cadena para dibujar
+                el autómata original.
+              </p>
             </div>
           }
         </mat-card-content>
@@ -73,28 +91,125 @@
         </mat-card-header>
 
         <mat-card-content>
-          <div class="espacio-diagrama">
-            <p>
-              Selecciona el método AFD al analizar para obtener
-              el autómata convertido.
-            </p>
-          </div>
+          @if (afdParaDiagrama(); as automataAfd) {
+            @defer (on immediate) {
+              <app-diagrama-automata
+                [automata]="automataAfd"
+                [estadosAfd]="resultado()?.afd?.estados ?? []"
+                [estadoTrampa]="
+                  resultado()?.afd?.estado_trampa ?? null
+                "
+                distribucion="niveles"
+              ></app-diagrama-automata>
+            } @loading {
+              <p role="status">
+                Cargando el diagrama del AFD…
+              </p>
+            } @error {
+              <p>
+                No se pudo cargar el componente del diagrama.
+              </p>
+            }
+
+            @if (resultado()?.afd; as afd) {
+              <table class="tabla-estados">
+                <caption>
+                  Correspondencia de estados
+                </caption>
+
+                <thead>
+                  <tr>
+                    <th scope="col">
+                      Identificador
+                    </th>
+
+                    <th scope="col">
+                      Subconjunto representado
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  @for (estado of afd.estados; track estado.id) {
+                    <tr>
+                      <td>{{ estado.id }}</td>
+
+                      <td>
+                        {{
+                          estado.componentes.length === 0
+                            ? '∅'
+                            : '{' +
+                              estado.componentes.join(', ') +
+                              '}'
+                        }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+
+              @if (afd.estado_trampa) {
+                <p>
+                  <strong>Estado trampa:</strong>
+                  ∅, con identificador interno
+                  {{ afd.estado_trampa }}.
+                </p>
+              }
+            }
+          } @else {
+            <div class="espacio-diagrama">
+              <p>
+                Selecciona el método AFD al analizar
+                para obtener el autómata convertido.
+              </p>
+            </div>
+          }
         </mat-card-content>
       </mat-card>
     </section>
   </div>
 
-  <section class="resultado" aria-labelledby="titulo-resultado">
+  <section
+    class="transiciones"
+    aria-labelledby="titulo-transiciones"
+  >
     <mat-card appearance="outlined">
       <mat-card-header>
         <mat-card-title>
-          <h2 id="titulo-resultado">Resultado y recorrido</h2>
+          <h2 id="titulo-transiciones">
+            Tabla de transiciones
+          </h2>
+        </mat-card-title>
+      </mat-card-header>
+
+      <mat-card-content>
+        <ng-container
+          [ngTemplateOutlet]="
+            editor.tablaTransiciones() ?? null
+          "
+        ></ng-container>
+      </mat-card-content>
+    </mat-card>
+  </section>
+
+  <section
+    class="resultado"
+    aria-labelledby="titulo-resultado"
+  >
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>
+          <h2 id="titulo-resultado">
+            Resultado y recorrido
+          </h2>
         </mat-card-title>
       </mat-card-header>
 
       <mat-card-content>
         @if (cargando()) {
-          <p role="status">Analizando la cadena…</p>
+          <p role="status">
+            Analizando la cadena…
+          </p>
         } @else if (erroresApi().length > 0) {
           <div role="alert">
             <h3>No se pudo realizar el análisis</h3>
@@ -108,16 +223,26 @@
         } @else if (resultado(); as respuesta) {
           <div role="status">
             <h3>
-              {{ respuesta.aceptada ? 'Cadena aceptada' : 'Cadena rechazada' }}
+              {{
+                respuesta.aceptada
+                  ? 'Cadena aceptada'
+                  : 'Cadena rechazada'
+              }}
             </h3>
 
             <p>
               <strong>Cadena analizada:</strong>
-              {{ respuesta.cadena === '' ? 'ε (cadena vacía)' : respuesta.cadena }}
+
+              {{
+                respuesta.cadena === ''
+                  ? 'ε (cadena vacía)'
+                  : respuesta.cadena
+              }}
             </p>
 
             <p>
               <strong>Método:</strong>
+
               {{
                 respuesta.metodo === 'afd'
                   ? 'Conversión a AFD y simulación'
@@ -127,8 +252,8 @@
           </div>
         } @else {
           <p>
-            Completa la configuración y pulsa Analizar cadena
-            para consultar el resultado.
+            Completa la configuración y pulsa
+            Analizar cadena para consultar el resultado.
           </p>
         }
       </mat-card-content>

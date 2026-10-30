@@ -56,14 +56,21 @@ h2 {
 
 .area-trabajo {
   display: grid;
-  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+  grid-template-columns:
+    minmax(280px, 380px)
+    minmax(0, 1fr);
   gap: 24px;
   align-items: start;
+}
+
+.area-trabajo > section {
+  min-width: 0;
 }
 
 .visualizaciones {
   display: grid;
   gap: 24px;
+  min-width: 0;
 }
 
 mat-card {
@@ -98,8 +105,35 @@ mat-card-content p {
   min-height: 240px;
 }
 
+.transiciones,
 .resultado {
+  min-width: 0;
   margin-top: 24px;
+}
+
+.tabla-estados {
+  width: 100%;
+  margin-top: 16px;
+  border-collapse: collapse;
+}
+
+.tabla-estados caption {
+  padding-bottom: 8px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.tabla-estados th,
+.tabla-estados td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.tabla-estados th {
+  background-color: var(--mat-sys-surface-container-low);
 }
 
 @media (max-width: 800px) {

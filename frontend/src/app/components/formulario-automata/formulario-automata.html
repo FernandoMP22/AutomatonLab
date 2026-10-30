@@ -3,203 +3,345 @@
   [formGroup]="formulario"
   (ngSubmit)="analizar()"
 >
-  <mat-form-field appearance="outline">
-    <mat-label>Número de nodos</mat-label>
-
-    <input
-      matInput
-      type="number"
-      min="1"
-      step="1"
-      formControlName="numero_nodos"
-    />
-
-    <mat-hint>Debe coincidir con la cantidad de estados.</mat-hint>
-
-    @if (formulario.controls.numero_nodos.invalid) {
-      <mat-error>Introduce un número entero mayor que cero.</mat-error>
-    }
-  </mat-form-field>
-
-  <mat-form-field appearance="outline">
-    <mat-label>Estados</mat-label>
-
-    <input
-      matInput
-      formControlName="estados"
-      placeholder="q0, q1, q2"
-    />
-
-    <mat-hint>Separa los nombres con comas.</mat-hint>
-
-    @if (formulario.controls.estados.hasError('required')) {
-      <mat-error>Introduce los estados del autómata.</mat-error>
-    }
-  </mat-form-field>
-
-  <mat-form-field appearance="outline">
-    <mat-label>Alfabeto</mat-label>
-
-    <input
-      matInput
-      formControlName="alfabeto"
-      placeholder="0, 1"
-    />
-
-    <mat-hint>Separa los símbolos con comas. No incluyas ε.</mat-hint>
-
-    @if (formulario.controls.alfabeto.hasError('required')) {
-      <mat-error>Introduce el alfabeto.</mat-error>
-    }
-  </mat-form-field>
-
-  <mat-form-field appearance="outline">
-    <mat-label>Estado inicial</mat-label>
-
-    <mat-select formControlName="estado_inicial">
-      @for (estado of estadosDisponibles; track $index) {
-        <mat-option [value]="estado">{{ estado }}</mat-option>
-      }
-    </mat-select>
-
-    @if (formulario.controls.estado_inicial.hasError('required')) {
-      <mat-error>Selecciona un estado inicial.</mat-error>
-    }
-  </mat-form-field>
-
-  <mat-form-field appearance="outline">
-    <mat-label>Estados finales</mat-label>
-
-    <mat-select formControlName="estados_finales" multiple>
-      @for (estado of estadosDisponibles; track $index) {
-        <mat-option [value]="estado">{{ estado }}</mat-option>
-      }
-    </mat-select>
-
-    <mat-hint>Puedes seleccionar varios o ninguno.</mat-hint>
-  </mat-form-field>
-
-  <mat-form-field appearance="outline">
-    <mat-label>Cadena a analizar</mat-label>
-
-    <input matInput formControlName="cadena" />
-
-    <mat-hint>Deja el campo vacío para analizar la cadena vacía.</mat-hint>
-  </mat-form-field>
-
-  <mat-form-field appearance="outline">
-    <mat-label>Método de solución</mat-label>
-
-    <mat-select formControlName="metodo">
-      <mat-option value="afnde">Simular AFND-ε</mat-option>
-      <mat-option value="afd">Convertir a AFD y simular</mat-option>
-    </mat-select>
-  </mat-form-field>
-
-  <section class="editor-transiciones" aria-labelledby="titulo-transiciones">
-    <h3 id="titulo-transiciones">Transiciones</h3>
+  <details class="bloque-carga">
+    <summary>Cargar un ejemplo desde JSON</summary>
 
     <p class="nota">
-      En cada fila selecciona un origen, un símbolo y todos sus destinos.
-      Utiliza ε para una transición que no consume símbolos.
+      Pega una definición completa o carga el ejemplo de dos rombos.
     </p>
 
-    <div class="lista-transiciones" formArrayName="transiciones">
-      @for (transicion of transiciones.controls; track transicion; let indice = $index) {
-        <div class="transicion" [formGroupName]="indice">
-          <div class="encabezado-transicion">
-            <h4>Transición {{ indice + 1 }}</h4>
+    <mat-form-field appearance="outline">
+      <mat-label>Ejemplo en JSON</mat-label>
 
-            <button
-              mat-button
-              type="button"
-              (click)="eliminarTransicion(indice)"
-              [attr.aria-label]="'Eliminar transición ' + (indice + 1)"
-            >
-              Eliminar
-            </button>
-          </div>
+      <textarea
+        matInput
+        rows="8"
+        class="texto-json"
+        [formControl]="textoEjemplo"
+        [readonly]="cargando()"
+      ></textarea>
+    </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Origen</mat-label>
-
-            <mat-select formControlName="origen">
-              @for (estado of estadosDisponibles; track $index) {
-                <mat-option [value]="estado">{{ estado }}</mat-option>
-              }
-            </mat-select>
-
-            @if (transicion.controls.origen.hasError('required')) {
-              <mat-error>Selecciona el estado de origen.</mat-error>
-            }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Símbolo</mat-label>
-
-            <mat-select formControlName="simbolo">
-              @for (simbolo of simbolosDisponibles; track $index) {
-                <mat-option [value]="simbolo">{{ simbolo }}</mat-option>
-              }
-            </mat-select>
-
-            @if (transicion.controls.simbolo.hasError('required')) {
-              <mat-error>Selecciona un símbolo.</mat-error>
-            }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Destinos</mat-label>
-
-            <mat-select formControlName="destinos" multiple>
-              @for (estado of estadosDisponibles; track $index) {
-                <mat-option [value]="estado">{{ estado }}</mat-option>
-              }
-            </mat-select>
-
-            @if (transicion.controls.destinos.hasError('required')) {
-              <mat-error>Selecciona al menos un destino.</mat-error>
-            }
-          </mat-form-field>
-        </div>
-      } @empty {
-        <p class="nota">
-          No hay transiciones definidas. Puedes agregar una con el botón inferior.
-        </p>
-      }
+    <div class="acciones">
+      <button
+        mat-stroked-button
+        type="button"
+        [disabled]="cargando()"
+        (click)="cargarEjemplo()"
+      >
+        Cargar en el formulario
+      </button>
     </div>
+
+    @if (mensajeCarga()) {
+      <p role="status">
+        {{ mensajeCarga() }}
+      </p>
+    }
+
+    @if (erroresCarga().length > 0) {
+      <div class="errores-validacion" role="alert">
+        <h3>No se pudo cargar el ejemplo</h3>
+
+        <ul>
+          @for (error of erroresCarga(); track $index) {
+            <li>{{ error }}</li>
+          }
+        </ul>
+      </div>
+    }
+  </details>
+
+  <div class="acciones">
+    <button
+      mat-stroked-button
+      type="button"
+      [disabled]="cargando()"
+      (click)="borrarConfiguracion()"
+    >
+      Borrar configuración
+    </button>
+
+    <button
+      mat-button
+      type="button"
+      [disabled]="cargando()"
+      (click)="cargarEjemploDiezEstados()"
+    >
+      Ejemplo de 10 estados · Dos rombos
+    </button>
+  </div>
+
+  <fieldset [disabled]="cargando()">
+    <mat-form-field appearance="outline">
+      <mat-label>Número de nodos</mat-label>
+
+      <input
+        matInput
+        type="number"
+        min="1"
+        step="1"
+        formControlName="numero_nodos"
+      />
+
+      <mat-hint>
+        Debe coincidir con la cantidad de estados.
+      </mat-hint>
+
+      @if (formulario.controls.numero_nodos.invalid) {
+        <mat-error>
+          Introduce un número entero mayor que cero.
+        </mat-error>
+      }
+    </mat-form-field>
 
     <button
       mat-stroked-button
       type="button"
-      (click)="agregarTransicion()"
+      [disabled]="cargando()"
+      (click)="generarEstados()"
     >
-      Agregar transición
+      Generar estados
     </button>
-  </section>
 
-  @let errores = erroresValidacion;
+    <p class="nota">
+      Genera q0, q1… Selecciona q0 como inicial y vacía
+      finales y conexiones.
+    </p>
 
-  @if (errores.length > 0) {
-    <section
-      class="errores-validacion"
-      aria-labelledby="titulo-errores"
-    >
-      <h3 id="titulo-errores">Revisa la configuración</h3>
+    <mat-form-field appearance="outline">
+      <mat-label>Estados</mat-label>
 
-      <ul>
-        @for (error of errores; track $index) {
-          <li>{{ error }}</li>
+      <input
+        matInput
+        formControlName="estados"
+        placeholder="q0, q1, q2"
+      />
+
+      <mat-hint>
+        Separa los nombres con comas.
+      </mat-hint>
+
+      @if (formulario.controls.estados.hasError('required')) {
+        <mat-error>
+          Introduce los estados del autómata.
+        </mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Alfabeto</mat-label>
+
+      <input
+        matInput
+        formControlName="alfabeto"
+        placeholder="0, 1"
+      />
+
+      <mat-hint>
+        Separa los símbolos con comas. No incluyas ε.
+      </mat-hint>
+
+      @if (formulario.controls.alfabeto.hasError('required')) {
+        <mat-error>
+          Introduce el alfabeto.
+        </mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Estado inicial</mat-label>
+
+      <mat-select
+        [disabled]="cargando()"
+        formControlName="estado_inicial"
+      >
+        @for (estado of estadosDisponibles; track estado) {
+          <mat-option [value]="estado">
+            {{ estado }}
+          </mat-option>
         }
-      </ul>
-    </section>
-  }
+      </mat-select>
 
-  <button
-    mat-flat-button
-    type="submit"
-    [disabled]="cargando() || formulario.invalid || errores.length > 0"
-  >
-    {{ cargando() ? 'Analizando…' : 'Analizar cadena' }}
-  </button>
+      @if (
+        formulario.controls.estado_inicial.hasError('required')
+      ) {
+        <mat-error>
+          Selecciona un estado inicial.
+        </mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Estados finales</mat-label>
+
+      <mat-select
+        [disabled]="cargando()"
+        formControlName="estados_finales"
+        multiple
+      >
+        @for (estado of estadosDisponibles; track estado) {
+          <mat-option [value]="estado">
+            {{ estado }}
+          </mat-option>
+        }
+      </mat-select>
+
+      <mat-hint>
+        Puedes seleccionar varios o ninguno.
+      </mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Cadena a analizar</mat-label>
+
+      <input matInput formControlName="cadena" />
+
+      <mat-hint>
+        Deja el campo vacío para analizar la cadena vacía.
+      </mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Método de solución</mat-label>
+
+      <mat-select
+        [disabled]="cargando()"
+        formControlName="metodo"
+      >
+        <mat-option value="afnde">
+          Simular AFND-ε
+        </mat-option>
+
+        <mat-option value="afd">
+          Convertir a AFD y simular
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  </fieldset>
 </form>
+
+<ng-template #tablaTransiciones>
+  <div class="editor-tabla">
+    <p class="nota">
+      Selecciona uno o varios destinos por celda.
+      Vacía significa sin transición; ε no consume símbolos.
+    </p>
+
+    <div class="tabla-scroll">
+      <table class="tabla-transiciones">
+        <caption>
+          Destinos por estado de origen y símbolo
+        </caption>
+
+        <thead>
+          <tr>
+            <th scope="col">Origen</th>
+
+            @for (simbolo of simbolosDisponibles; track simbolo) {
+              <th scope="col">{{ simbolo }}</th>
+            }
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (estado of estadosDisponibles; track estado) {
+            <tr>
+              <th scope="row">{{ estado }}</th>
+
+              @for (
+                simbolo of simbolosDisponibles;
+                track simbolo
+              ) {
+                <td>
+                  <mat-form-field
+                    appearance="outline"
+                    subscriptSizing="dynamic"
+                    class="celda-destinos"
+                  >
+                    <mat-label>Destinos</mat-label>
+
+                    <mat-select
+                      multiple
+                      [disabled]="cargando()"
+                      [value]="obtenerDestinos(estado, simbolo)"
+                      (selectionChange)="
+                        cambiarDestinos(
+                          estado,
+                          simbolo,
+                          $event.value
+                        )
+                      "
+                      aria-label="Destinos desde {{ estado }} con {{ simbolo }}"
+                    >
+                      @for (
+                        destino of estadosDisponibles;
+                        track destino
+                      ) {
+                        <mat-option [value]="destino">
+                          {{ destino }}
+                        </mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </td>
+              }
+            </tr>
+          } @empty {
+            <tr>
+              <td>
+                Define o genera los estados para comenzar.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <button
+      mat-button
+      type="button"
+      [disabled]="cargando()"
+      (click)="limpiarReferencias()"
+    >
+      Limpiar referencias inexistentes
+    </button>
+
+    <p class="nota">
+      Después de editar nombres o símbolos, limpia las
+      conexiones y selecciones que ya no existan.
+    </p>
+
+    @let errores = erroresValidacion;
+
+    @if (errores.length > 0) {
+      <section
+        class="errores-validacion"
+        aria-labelledby="titulo-errores"
+      >
+        <h3 id="titulo-errores">
+          Revisa la configuración
+        </h3>
+
+        <ul>
+          @for (error of errores; track $index) {
+            <li>{{ error }}</li>
+          }
+        </ul>
+      </section>
+    }
+
+    <button
+      mat-flat-button
+      type="button"
+      (click)="analizar()"
+      [disabled]="
+        cargando() ||
+        formulario.invalid ||
+        errores.length > 0
+      "
+    >
+      {{ cargando() ? 'Analizando…' : 'Analizar cadena' }}
+    </button>
+  </div>
+</ng-template>

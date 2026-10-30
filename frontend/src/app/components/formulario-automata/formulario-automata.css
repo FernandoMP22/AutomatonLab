@@ -1,5 +1,6 @@
 :host {
   display: block;
+  min-width: 0;
 }
 
 .formulario {
@@ -8,9 +9,23 @@
   padding-top: 8px;
 }
 
+fieldset {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 mat-form-field {
   width: 100%;
   min-width: 0;
+}
+
+h3 {
+  margin: 0;
+  font-size: 18px;
 }
 
 .nota {
@@ -20,43 +35,73 @@ mat-form-field {
   line-height: 1.6;
 }
 
-.editor-transiciones {
-  display: grid;
-  gap: 16px;
-  min-width: 0;
-}
-
-h3 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.lista-transiciones {
-  display: grid;
-  gap: 16px;
-  min-width: 0;
-}
-
-.transicion {
-  display: grid;
-  gap: 20px;
+.bloque-carga {
   min-width: 0;
   padding: 16px;
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 12px;
 }
 
-.encabezado-transicion {
+.bloque-carga summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.bloque-carga[open] > :not(summary) {
+  margin-top: 16px;
+}
+
+.texto-json {
+  font-family: Consolas, monospace;
+  font-size: 12px;
+}
+
+.acciones {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-h4 {
-  margin: 0;
-  font-size: 14px;
+.editor-tabla {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.tabla-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.tabla-transiciones {
+  min-width: 100%;
+  border-collapse: collapse;
+}
+
+.tabla-transiciones caption {
+  padding-bottom: 12px;
+  text-align: left;
+}
+
+.tabla-transiciones th,
+.tabla-transiciones td {
+  padding: 8px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  text-align: left;
+}
+
+.tabla-transiciones th {
+  background-color: var(--mat-sys-surface-container-low);
+}
+
+.tabla-transiciones th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.celda-destinos {
+  min-width: 150px;
 }
 
 .errores-validacion {

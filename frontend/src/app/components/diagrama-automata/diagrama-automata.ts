@@ -1,7 +1,9 @@
 import {
   Component,
+  computed,
   ElementRef,
   input,
+  signal,
   ViewChild,
 } from '@angular/core';
 import type {
@@ -11,9 +13,16 @@ import type {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import cytoscape from 'cytoscape';
-import type { Core, ElementDefinition } from 'cytoscape';
+import type {
+  Core,
+  ElementDefinition,
+  LayoutOptions,
+} from 'cytoscape';
 
-import type { AutomataEntrada } from '../../models/automata';
+import type {
+  AutomataEntrada,
+  EstadoAFDSalida,
+} from '../../models/automata';
 
 @Component({
   selector: 'app-diagrama-automata',
@@ -23,15 +32,35 @@ import type { AutomataEntrada } from '../../models/automata';
 })
 export class DiagramaAutomata implements AfterViewInit, OnChanges, OnDestroy {
   readonly automata = input.required<AutomataEntrada>();
+  readonly estadosAfd = input<EstadoAFDSalida[]>([]);
+  readonly estadoTrampa = input<string | null>(null);
+  readonly distribucion = input<'horizontal' | 'niveles'>('horizontal');
 
   @ViewChild('contenedor')
   private contenedor?: ElementRef<HTMLDivElement>;
 
   private grafo?: Core;
   private observador?: ResizeObserver;
+  private fotograma?: number;
+
+  private readonly estructura = computed(() =>
+    this.calcularEstructura(this.automata()),
+  );
+
+  protected readonly vistaParcial = signal(false);
+
+  protected readonly alturaLienzo = computed(() => {
+    if (this.distribucion() !== 'niveles') {
+      return 360;
+    }
+
+    const altura = 180 + this.estructura().filas * 120;
+
+    return Math.min(640, Math.max(360, altura));
+  });
 
   ngAfterViewInit(): void {
-    this.dibujar();
+    this.programarDibujo();
 
     if (this.contenedor) {
       this.observador = new ResizeObserver(() => {
@@ -44,18 +73,193 @@ export class DiagramaAutomata implements AfterViewInit, OnChanges, OnDestroy {
 
   ngOnChanges(): void {
     if (this.contenedor) {
-      this.dibujar();
+      this.programarDibujo();
     }
   }
 
   ngOnDestroy(): void {
+    if (this.fotograma !== undefined) {
+      cancelAnimationFrame(this.fotograma);
+    }
+
     this.observador?.disconnect();
     this.grafo?.destroy();
+    this.grafo = undefined;
+  }
+
+  protected obtenerEtiqueta(estado: string): string {
+    const estadoAfd = this.estadosAfd().find(
+      (elemento) => elemento.id === estado,
+    );
+
+    if (!estadoAfd) {
+      return estado;
+    }
+
+    if (estadoAfd.componentes.length === 0) {
+      return '∅';
+    }
+
+    return `{${estadoAfd.componentes.join(', ')}}`;
   }
 
   protected ajustarVista(): void {
-    this.grafo?.resize();
-    this.grafo?.fit(undefined, 36);
+    const grafo = this.grafo;
+    const contenedor = this.contenedor?.nativeElement;
+
+    if (!grafo || !contenedor) {
+      return;
+    }
+
+    grafo.resize();
+
+    if (this.distribucion() !== 'niveles') {
+      grafo.fit(undefined, 36);
+      this.vistaParcial.set(false);
+      return;
+    }
+
+    const margen = 24;
+
+    grafo.fit(undefined, margen);
+
+    const zoomCompleto = grafo.zoom();
+    const zoomLegible = Math.min(1.35, Math.max(0.85, zoomCompleto));
+    const esVistaParcial = zoomCompleto < 0.85;
+
+    grafo.zoom(zoomLegible);
+
+    if (esVistaParcial) {
+      const inicial = grafo.getElementById('estado-0');
+      const posicion = inicial.position();
+      const radio = Number(inicial.data('tamano')) / 2;
+
+      grafo.pan({
+        x: margen + (radio - posicion.x) * zoomLegible,
+        y: contenedor.clientHeight / 2 - posicion.y * zoomLegible,
+      });
+    } else {
+      grafo.center();
+    }
+
+    this.vistaParcial.set(esVistaParcial);
+  }
+
+  protected verTodo(): void {
+    const grafo = this.grafo;
+
+    if (!grafo) {
+      return;
+    }
+
+    grafo.resize();
+    grafo.fit(undefined, 24);
+
+    if (grafo.zoom() > 1.35) {
+      grafo.zoom(1.35);
+      grafo.center();
+    }
+
+    this.vistaParcial.set(false);
+  }
+
+  private programarDibujo(): void {
+    if (this.fotograma !== undefined) {
+      cancelAnimationFrame(this.fotograma);
+    }
+
+    this.fotograma = requestAnimationFrame(() => {
+      this.fotograma = undefined;
+      this.dibujar();
+    });
+  }
+
+  private calcularEstructura(entrada: AutomataEntrada): {
+    filas: number;
+    niveles: number;
+  } {
+    const niveles = new Map<string, number>([
+      [entrada.estado_inicial, 0],
+    ]);
+
+    const pendientes = [entrada.estado_inicial];
+
+    for (let indice = 0; indice < pendientes.length; indice++) {
+      const origen = pendientes[indice];
+      const nivelActual = niveles.get(origen)!;
+
+      for (const transicion of entrada.transiciones) {
+        if (transicion.origen !== origen) {
+          continue;
+        }
+
+        for (const destino of transicion.destinos) {
+          if (!niveles.has(destino)) {
+            niveles.set(destino, nivelActual + 1);
+            pendientes.push(destino);
+          }
+        }
+      }
+    }
+
+    const cantidades = new Map<number, number>();
+
+    let filas = 1;
+    let cantidadNiveles = 1;
+
+    for (const estado of entrada.estados) {
+      const nivel = niveles.get(estado) ?? 0;
+      const cantidad = (cantidades.get(nivel) ?? 0) + 1;
+
+      cantidades.set(nivel, cantidad);
+
+      filas = Math.max(filas, cantidad);
+      cantidadNiveles = Math.max(cantidadNiveles, nivel + 1);
+    }
+
+    return {
+      filas,
+      niveles: cantidadNiveles,
+    };
+  }
+
+  private crearDistribucion(): LayoutOptions {
+    if (this.distribucion() === 'niveles') {
+      const estructura = this.estructura();
+
+      return {
+        name: 'breadthfirst',
+        directed: true,
+        roots: ['estado-0'],
+        fit: false,
+        padding: 24,
+        spacingFactor: 1.05,
+        avoidOverlap: true,
+        nodeDimensionsIncludeLabels: true,
+
+        boundingBox: {
+          x1: 0,
+          y1: 0,
+          w: Math.max(180, (estructura.filas - 1) * 140),
+          h: Math.max(280, (estructura.niveles - 1) * 220),
+        },
+
+        transform: (_nodo, posicion) => ({
+          x: posicion.y,
+          y: posicion.x,
+        }),
+      };
+    }
+
+    return {
+      name: 'grid',
+      rows: 1,
+      fit: false,
+      padding: 36,
+      avoidOverlap: true,
+      nodeDimensionsIncludeLabels: true,
+      sort: (a, b) => Number(a.data('orden')) - Number(b.data('orden')),
+    };
   }
 
   private dibujar(): void {
@@ -68,16 +272,9 @@ export class DiagramaAutomata implements AfterViewInit, OnChanges, OnDestroy {
     this.grafo = cytoscape({
       container: this.contenedor.nativeElement,
       elements: this.crearElementos(this.automata()),
+      layout: this.crearDistribucion(),
 
-      layout: {
-        name: 'grid',
-        rows: 1,
-        padding: 36,
-        avoidOverlap: true,
-        sort: (a, b) => Number(a.data('orden')) - Number(b.data('orden')),
-      },
-
-      minZoom: 0.2,
+      minZoom: 0.05,
       maxZoom: 3,
       wheelSensitivity: 0.2,
 
@@ -86,8 +283,8 @@ export class DiagramaAutomata implements AfterViewInit, OnChanges, OnDestroy {
           selector: 'node',
           style: {
             label: 'data(label)',
-            width: 60,
-            height: 60,
+            width: 'data(tamano)',
+            height: 'data(tamano)',
             'background-color': '#ffffff',
             'border-width': 2,
             'border-color': '#475569',
@@ -95,6 +292,8 @@ export class DiagramaAutomata implements AfterViewInit, OnChanges, OnDestroy {
             'font-size': 15,
             'text-valign': 'center',
             'text-halign': 'center',
+            'text-wrap': 'wrap',
+            'text-max-width': '150px',
           },
         },
         {
@@ -114,6 +313,15 @@ export class DiagramaAutomata implements AfterViewInit, OnChanges, OnDestroy {
           },
         },
         {
+          selector: 'node.trampa',
+          style: {
+            'background-color': '#fce8e6',
+            'border-color': '#b3261e',
+            color: '#b3261e',
+            'font-weight': 'bold',
+          },
+        },
+        {
           selector: 'edge',
           style: {
             label: 'data(label)',
@@ -130,6 +338,14 @@ export class DiagramaAutomata implements AfterViewInit, OnChanges, OnDestroy {
           },
         },
         {
+          selector: 'edge.curva',
+          style: {
+            'curve-style': 'unbundled-bezier',
+            'control-point-distances': 'data(curvatura)',
+            'control-point-weights': '0.5',
+          },
+        },
+        {
           selector: 'edge:loop',
           style: {
             'loop-direction': '0deg',
@@ -137,14 +353,25 @@ export class DiagramaAutomata implements AfterViewInit, OnChanges, OnDestroy {
             'control-point-step-size': 80,
           },
         },
+        {
+          selector: 'edge.trampa',
+          style: {
+            'line-color': '#c77b75',
+            'target-arrow-color': '#c77b75',
+            color: '#a63a32',
+          },
+        },
       ],
     });
+
+    this.ajustarVista();
   }
 
   private crearElementos(entrada: AutomataEntrada): ElementDefinition[] {
     const elementos: ElementDefinition[] = [];
     const identificadores = new Map<string, string>();
     const bucles = new Map<string, Set<string>>();
+    const conexiones = new Map<string, number>();
 
     const estadosOrdenados = [
       entrada.estado_inicial,
@@ -155,7 +382,13 @@ export class DiagramaAutomata implements AfterViewInit, OnChanges, OnDestroy {
 
     estadosOrdenados.forEach((estado, indice) => {
       const id = `estado-${indice}`;
+      const etiqueta = this.obtenerEtiqueta(estado);
       const clases: string[] = [];
+
+      const tamano = Math.max(
+        60,
+        Math.min(180, Array.from(etiqueta).length * 9 + 24),
+      );
 
       identificadores.set(estado, id);
 
@@ -167,11 +400,16 @@ export class DiagramaAutomata implements AfterViewInit, OnChanges, OnDestroy {
         clases.push('final');
       }
 
+      if (estado === this.estadoTrampa()) {
+        clases.push('trampa');
+      }
+
       elementos.push({
         data: {
           id,
-          label: estado,
+          label: etiqueta,
           orden: indice,
+          tamano,
         },
         classes: clases.join(' '),
       });
@@ -186,13 +424,34 @@ export class DiagramaAutomata implements AfterViewInit, OnChanges, OnDestroy {
 
           bucles.get(destino)!.add(transicion.simbolo);
         } else {
+          const clases: string[] = [];
+
+          const clave = JSON.stringify([
+            transicion.origen,
+            destino,
+          ]);
+
+          const numeroConexion = conexiones.get(clave) ?? 0;
+
+          conexiones.set(clave, numeroConexion + 1);
+
+          if (this.distribucion() === 'niveles') {
+            clases.push('curva');
+          }
+
+          if (destino === this.estadoTrampa()) {
+            clases.push('trampa');
+          }
+
           elementos.push({
             data: {
               id: `transicion-${indice}-${indiceDestino}`,
               source: identificadores.get(transicion.origen)!,
               target: identificadores.get(destino)!,
               label: transicion.simbolo,
+              curvatura: 40 + numeroConexion * 32,
             },
+            classes: clases.join(' '),
           });
         }
       });
@@ -208,6 +467,7 @@ export class DiagramaAutomata implements AfterViewInit, OnChanges, OnDestroy {
           target: id,
           label: Array.from(simbolos).join(', '),
         },
+        classes: estado === this.estadoTrampa() ? 'trampa' : '',
       });
     });
 
