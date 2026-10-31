@@ -1,6 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -12,11 +13,19 @@ import type { AutomataEntrada, ResultadoAnalisis } from './models/automata';
 
 import { AutomatasService } from './services/automatas';
 
+interface PasoVisual {
+  posicion: number;
+  simbolo: string | null;
+  estadosOriginales: string[];
+  estadoAfd: string | null;
+}
+
 @Component({
   selector: 'app-root',
 
   imports: [
     NgTemplateOutlet,
+    MatButtonModule,
     MatTabsModule,
     MatCardModule,
     MatToolbarModule,
@@ -41,6 +50,67 @@ export class App {
   protected readonly erroresApi = signal<string[]>([]);
 
   protected readonly automataAnalizado = signal<AutomataEntrada | null>(null);
+
+  protected readonly indicePaso = signal(0);
+
+  // Adapta los dos formatos del backend a los datos de un paso visual.
+  protected readonly pasosRecorrido = computed<PasoVisual[]>(() => {
+    const respuesta = this.resultado();
+    if (!respuesta) return [];
+
+    if (respuesta.metodo === 'afnde') {
+      return (respuesta.recorrido_afnde ?? []).map((paso) => ({
+        posicion: paso.posicion,
+        simbolo: paso.simbolo,
+        estadosOriginales: paso.estados,
+        estadoAfd: null,
+      }));
+    }
+
+    return (respuesta.recorrido_afd ?? []).map((paso) => ({
+      posicion: paso.posicion,
+      simbolo: paso.simbolo,
+      estadoAfd: paso.estado,
+      estadosOriginales:
+        respuesta.afd?.estados.find((estado) => estado.id === paso.estado)?.componentes ?? [],
+    }));
+  });
+
+  protected readonly pasoActual = computed(() => this.pasosRecorrido()[this.indicePaso()] ?? null);
+
+  protected readonly estadosOriginalesActivos = computed(
+    () => this.pasoActual()?.estadosOriginales ?? [],
+  );
+
+  protected readonly estadosAfdActivos = computed(() => {
+    const estado = this.pasoActual()?.estadoAfd;
+    return estado === null || estado === undefined ? [] : [estado];
+  });
+
+  protected readonly cadenaConsumida = computed(() =>
+    Array.from(this.resultado()?.cadena ?? '')
+      .slice(0, this.pasoActual()?.posicion ?? 0)
+      .join(''),
+  );
+
+  protected readonly cadenaPendiente = computed(() =>
+    Array.from(this.resultado()?.cadena ?? '')
+      .slice(this.pasoActual()?.posicion ?? 0)
+      .join(''),
+  );
+
+  protected pasoAnterior(): void {
+    this.indicePaso.update((indice) => Math.max(0, indice - 1));
+  }
+
+  protected pasoSiguiente(): void {
+    const ultimo = Math.max(0, this.pasosRecorrido().length - 1);
+    this.indicePaso.update((indice) => Math.min(ultimo, indice + 1));
+  }
+
+  protected reiniciarRecorrido(): void {
+    this.indicePaso.set(0);
+  }
 
   protected readonly afdParaDiagrama = computed<AutomataEntrada | null>(() => {
     const respuesta = this.resultado();
@@ -75,6 +145,7 @@ export class App {
   });
 
   protected limpiarAnalisis(): void {
+    this.reiniciarRecorrido();
     this.pestanaActiva.set(0);
     this.resultado.set(null);
     this.automataAnalizado.set(null);

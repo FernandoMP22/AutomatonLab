@@ -1,6 +1,4 @@
-import type {
-  ComponentFixture,
-} from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
 
 import { TestBed } from '@angular/core/testing';
 
@@ -8,9 +6,7 @@ import type { ElementDefinition } from 'cytoscape';
 
 import { DiagramaAutomata } from './diagrama-automata';
 
-import type {
-  AutomataEntrada,
-} from '../../models/automata';
+import type { AutomataEntrada } from '../../models/automata';
 
 const { crearGrafo } = vi.hoisted(() => ({
   crearGrafo: vi.fn(),
@@ -26,16 +22,7 @@ function crearEntrada(): AutomataEntrada {
 
     estados: ['q0', 'q1', 'q2'],
 
-    alfabeto: [
-      'a',
-      'b',
-      'c',
-      'd',
-      'e',
-      'f',
-      'g',
-      ...'0123456789',
-    ],
+    alfabeto: ['a', 'b', 'c', 'd', 'e', 'f', 'g', ...'0123456789'],
 
     estado_inicial: 'q0',
 
@@ -79,13 +66,13 @@ describe('Símbolos desplegables del diagrama', () => {
     y: number;
   };
 
-  let pulsarArista: (
-    origen: string,
-    destino: string,
-  ) => void;
+  let pulsarArista: (origen: string, destino: string) => void;
+
+  let estadosMarcados: string[];
 
   beforeEach(() => {
     fotogramas = [];
+    estadosMarcados = [];
 
     punto = {
       x: 450,
@@ -94,19 +81,13 @@ describe('Símbolos desplegables del diagrama', () => {
 
     crearGrafo.mockReset();
 
-    vi.stubGlobal(
-      'requestAnimationFrame',
-      (callback: FrameRequestCallback) => {
-        fotogramas.push(callback);
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      fotogramas.push(callback);
 
-        return fotogramas.length;
-      },
-    );
+      return fotogramas.length;
+    });
 
-    vi.stubGlobal(
-      'cancelAnimationFrame',
-      vi.fn(),
-    );
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
 
     vi.stubGlobal(
       'ResizeObserver',
@@ -126,16 +107,23 @@ describe('Símbolos desplegables del diagrama', () => {
       addClass: vi.fn().mockReturnThis(),
     };
 
+    const nodos = {
+      removeClass: vi.fn().mockReturnThis(),
+      filter: vi.fn((predicado: (nodo: { data: (clave: string) => string }) => boolean) => {
+        estadosMarcados = ['q0', 'q1', 'q2'].filter((nombre) => predicado({ data: () => nombre }));
+        return nodos;
+      }),
+      addClass: vi.fn().mockReturnThis(),
+    };
     const grafo: Record<string, unknown> = {
       edges: () => aristas,
+      nodes: () => nodos,
 
       on: vi.fn(
         (
           evento: string,
 
-          selector:
-            | string
-            | ((evento: { target: unknown }) => void),
+          selector: string | ((evento: { target: unknown }) => void),
 
           callback?: (evento: {
             target: {
@@ -143,30 +131,19 @@ describe('Símbolos desplegables del diagrama', () => {
             };
           }) => void,
         ) => {
-          if (
-            typeof selector === 'string' &&
-            callback
-          ) {
+          if (typeof selector === 'string' && callback) {
             pulsarArista = (origen, destino) =>
               callback({
                 target: {
-                  data: (clave) =>
-                    clave === 'origen'
-                      ? origen
-                      : destino,
+                  data: (clave) => (clave === 'origen' ? origen : destino),
                 },
               });
-          } else if (
-            typeof selector === 'function' &&
-            evento === 'tap'
-          ) {
+          } else if (typeof selector === 'function' && evento === 'tap') {
             pulsarFondo = () =>
               selector({
                 target: grafo,
               });
-          } else if (
-            typeof selector === 'function'
-          ) {
+          } else if (typeof selector === 'function') {
             moverVista = () =>
               selector({
                 target: grafo,
@@ -190,14 +167,10 @@ describe('Símbolos desplegables del diagrama', () => {
     vi.unstubAllGlobals();
   });
 
-  function actualizar(
-    fixture: ComponentFixture<DiagramaAutomata>,
-    host: HTMLElement,
-  ): void {
+  function actualizar(fixture: ComponentFixture<DiagramaAutomata>, host: HTMLElement): void {
     fixture.detectChanges();
 
-    const panel =
-      host.querySelector('.detalle-transicion');
+    const panel = host.querySelector('.detalle-transicion');
 
     if (panel) {
       Object.defineProperties(panel, {
@@ -221,38 +194,27 @@ describe('Símbolos desplegables del diagrama', () => {
   }
 
   async function crear() {
-    const fixture =
-      TestBed.createComponent(DiagramaAutomata);
+    const fixture = TestBed.createComponent(DiagramaAutomata);
 
-    fixture.componentRef.setInput(
-      'automata',
-      crearEntrada(),
-    );
+    fixture.componentRef.setInput('automata', crearEntrada());
 
-    fixture.componentRef.setInput(
-      'estadoTrampa',
-      'q2',
-    );
+    fixture.componentRef.setInput('estadoTrampa', 'q2');
 
     await fixture.whenStable();
 
-    const host =
-      fixture.nativeElement as HTMLElement;
+    const host = fixture.nativeElement as HTMLElement;
 
-    Object.defineProperties(
-      host.querySelector('.lienzo'),
-      {
-        clientWidth: {
-          value: 900,
-          configurable: true,
-        },
-
-        clientHeight: {
-          value: 360,
-          configurable: true,
-        },
+    Object.defineProperties(host.querySelector('.lienzo'), {
+      clientWidth: {
+        value: 900,
+        configurable: true,
       },
-    );
+
+      clientHeight: {
+        value: 360,
+        configurable: true,
+      },
+    });
 
     while (fotogramas.length) {
       fotogramas.shift()!(0);
@@ -269,65 +231,39 @@ describe('Símbolos desplegables del diagrama', () => {
   it('conserva tres símbolos y compacta las etiquetas de cuatro o más, incluidos bucles', async () => {
     await crear();
 
-    const elementos =
-      crearGrafo.mock.calls[0][0]
-        .elements as ElementDefinition[];
+    const elementos = crearGrafo.mock.calls[0][0].elements as ElementDefinition[];
 
-    const aristas = elementos.filter(
-      (elemento) => elemento.data.source,
+    const aristas = elementos.filter((elemento) => elemento.data.source);
+
+    expect(aristas.find((elemento) => elemento.data['origen'] === 'q0')?.data['label']).toBe(
+      'a, b, c',
     );
 
-    expect(
-      aristas.find(
-        (elemento) =>
-          elemento.data['origen'] === 'q0',
-      )?.data['label'],
-    ).toBe('a, b, c');
+    expect(aristas.find((elemento) => elemento.data['origen'] === 'q1')?.data['label']).toBe(
+      '4 símbolos ▸',
+    );
 
-    expect(
-      aristas.find(
-        (elemento) =>
-          elemento.data['origen'] === 'q1',
-      )?.data['label'],
-    ).toBe('4 símbolos ▸');
+    expect(aristas.find((elemento) => elemento.data['origen'] === 'q2')?.data['label']).toBe(
+      '10 símbolos ▸',
+    );
 
-    expect(
-      aristas.find(
-        (elemento) =>
-          elemento.data['origen'] === 'q2',
-      )?.data['label'],
-    ).toBe('10 símbolos ▸');
-
-    expect(
-      aristas.find(
-        (elemento) =>
-          elemento.data['origen'] === 'q2',
-      )?.classes,
-    ).toContain('trampa');
+    expect(aristas.find((elemento) => elemento.data['origen'] === 'q2')?.classes).toContain(
+      'trampa',
+    );
   });
 
   it('abre el detalle al pulsar una flecha y lo actualiza al pulsar otra', async () => {
-    const {
-      fixture,
-      host,
-    } = await crear();
+    const { fixture, host } = await crear();
 
     pulsarArista('q1', 'q2');
 
     actualizar(fixture, host);
 
-    expect(
-      host.querySelector('h3')?.textContent,
-    ).toContain('q1 → q2');
+    expect(host.querySelector('h3')?.textContent).toContain('q1 → q2');
 
     expect(
-      [
-        ...host.querySelectorAll(
-          '.lista-simbolos li',
-        ),
-      ].map(
-        (elemento) =>
-          elemento.textContent?.trim(),
+      [...host.querySelectorAll('.lista-simbolos li')].map((elemento) =>
+        elemento.textContent?.trim(),
       ),
     ).toEqual(['d', 'e', 'f', 'g']);
 
@@ -335,126 +271,78 @@ describe('Símbolos desplegables del diagrama', () => {
 
     actualizar(fixture, host);
 
-    expect(
-      host.querySelector('h3')?.textContent,
-    ).toContain('q2 → q2');
+    expect(host.querySelector('h3')?.textContent).toContain('q2 → q2');
 
-    expect(
-      host.querySelectorAll(
-        '.lista-simbolos li',
-      ),
-    ).toHaveLength(10);
+    expect(host.querySelectorAll('.lista-simbolos li')).toHaveLength(10);
 
-    expect(
-      host.querySelector('.detalle-trampa'),
-    ).toBeTruthy();
+    expect(host.querySelector('.detalle-trampa')).toBeTruthy();
   });
 
   it('cierra el panel con su botón', async () => {
-    const {
-      fixture,
-      host,
-    } = await crear();
+    const { fixture, host } = await crear();
 
     pulsarArista('q1', 'q2');
 
     actualizar(fixture, host);
 
-    host
-      .querySelector<HTMLButtonElement>(
-        '.detalle-transicion button',
-      )!
-      .click();
+    host.querySelector<HTMLButtonElement>('.detalle-transicion button')!.click();
 
     actualizar(fixture, host);
 
-    expect(
-      host.querySelector('.detalle-transicion'),
-    ).toBeNull();
+    expect(host.querySelector('.detalle-transicion')).toBeNull();
   });
 
   it('permite elegir una transición desde una lista accesible', async () => {
-    const {
-      fixture,
-      host,
-    } = await crear();
+    const { fixture, host } = await crear();
 
-    const selector =
-      host.querySelector('select')!;
+    const selector = host.querySelector('select')!;
 
     selector.value = '1';
 
-    selector.dispatchEvent(
-      new Event('change'),
-    );
+    selector.dispatchEvent(new Event('change'));
 
     actualizar(fixture, host);
 
-    expect(
-      host.querySelector('h3')?.textContent,
-    ).toContain('q2 → q2');
+    expect(host.querySelector('h3')?.textContent).toContain('q2 → q2');
 
     selector.value = '';
 
-    selector.dispatchEvent(
-      new Event('change'),
-    );
+    selector.dispatchEvent(new Event('change'));
 
     actualizar(fixture, host);
 
-    expect(
-      host.querySelector('.detalle-transicion'),
-    ).toBeNull();
+    expect(host.querySelector('.detalle-transicion')).toBeNull();
   });
 
   it('retira el detalle anterior cuando cambia el autómata, aunque su pestaña esté oculta', async () => {
-    const {
-      fixture,
-      host,
-    } = await crear();
+    const { fixture, host } = await crear();
 
     pulsarArista('q1', 'q2');
 
     actualizar(fixture, host);
 
-    fixture.componentRef.setInput(
-      'activo',
-      false,
-    );
+    fixture.componentRef.setInput('activo', false);
 
-    fixture.componentRef.setInput(
-      'automata',
-      {
-        ...crearEntrada(),
-        transiciones: [],
-      },
-    );
+    fixture.componentRef.setInput('automata', {
+      ...crearEntrada(),
+      transiciones: [],
+    });
 
     actualizar(fixture, host);
 
-    expect(
-      host.querySelector('.detalle-transicion'),
-    ).toBeNull();
+    expect(host.querySelector('.detalle-transicion')).toBeNull();
 
-    expect(
-      host.querySelector('select'),
-    ).toBeNull();
+    expect(host.querySelector('select')).toBeNull();
   });
 
   it('coloca el cuadro dentro del lienzo, centrado encima de la etiqueta', async () => {
-    const {
-      fixture,
-      host,
-    } = await crear();
+    const { fixture, host } = await crear();
 
     pulsarArista('q1', 'q2');
 
     actualizar(fixture, host);
 
-    const panel =
-      host.querySelector<HTMLElement>(
-        '.marco-lienzo .detalle-transicion',
-      )!;
+    const panel = host.querySelector<HTMLElement>('.marco-lienzo .detalle-transicion')!;
 
     expect(panel.style.left).toBe('310px');
     expect(panel.style.top).toBe('68px');
@@ -462,10 +350,7 @@ describe('Símbolos desplegables del diagrama', () => {
   });
 
   it('reubica el cuadro al mover la vista y lo mantiene dentro de los bordes', async () => {
-    const {
-      fixture,
-      host,
-    } = await crear();
+    const { fixture, host } = await crear();
 
     pulsarArista('q1', 'q2');
 
@@ -480,10 +365,7 @@ describe('Símbolos desplegables del diagrama', () => {
 
     actualizar(fixture, host);
 
-    const panel =
-      host.querySelector<HTMLElement>(
-        '.detalle-transicion',
-      )!;
+    const panel = host.querySelector<HTMLElement>('.detalle-transicion')!;
 
     expect(panel.style.left).toBe('612px');
     expect(panel.style.top).toBe('168px');
@@ -502,10 +384,7 @@ describe('Símbolos desplegables del diagrama', () => {
   });
 
   it('cierra el cuadro al pulsar el fondo', async () => {
-    const {
-      fixture,
-      host,
-    } = await crear();
+    const { fixture, host } = await crear();
 
     pulsarArista('q1', 'q2');
 
@@ -515,36 +394,43 @@ describe('Símbolos desplegables del diagrama', () => {
 
     actualizar(fixture, host);
 
-    expect(
-      host.querySelector('.detalle-transicion'),
-    ).toBeNull();
+    expect(host.querySelector('.detalle-transicion')).toBeNull();
   });
 
   it('permite cerrar con Escape desde el cuadro', async () => {
-    const {
-      fixture,
-      host,
-    } = await crear();
+    const { fixture, host } = await crear();
 
     pulsarArista('q1', 'q2');
 
     actualizar(fixture, host);
 
-    host
-      .querySelector(
-        '.detalle-transicion button',
-      )!
-      .dispatchEvent(
-        new KeyboardEvent('keydown', {
-          key: 'Escape',
-          bubbles: true,
-        }),
-      );
+    host.querySelector('.detalle-transicion button')!.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+      }),
+    );
 
     actualizar(fixture, host);
 
-    expect(
-      host.querySelector('.detalle-transicion'),
-    ).toBeNull();
+    expect(host.querySelector('.detalle-transicion')).toBeNull();
+  });
+  it('actualiza los estados del paso sin reconstruir el grafo ni cerrar el detalle', async () => {
+    const { fixture, host } = await crear();
+    pulsarArista('q1', 'q2');
+    actualizar(fixture, host);
+    const dibujos = crearGrafo.mock.calls.length;
+    fixture.componentRef.setInput('estadosActivos', ['q0', 'q1']);
+    actualizar(fixture, host);
+    expect(estadosMarcados).toEqual(['q0', 'q1']);
+    expect(crearGrafo).toHaveBeenCalledTimes(dibujos);
+    expect(host.querySelector('.detalle-transicion')).toBeTruthy();
+    fixture.componentRef.setInput('estadosActivos', ['q2']);
+    actualizar(fixture, host);
+    expect(estadosMarcados).toEqual(['q2']);
+    fixture.componentRef.setInput('estadosActivos', []);
+    actualizar(fixture, host);
+    expect(estadosMarcados).toEqual([]);
+    expect(crearGrafo).toHaveBeenCalledTimes(dibujos);
   });
 });

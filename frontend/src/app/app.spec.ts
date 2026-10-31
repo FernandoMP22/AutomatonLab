@@ -106,10 +106,47 @@ describe('App', () => {
       expect(host.querySelector('.recorrido tbody')?.textContent).toContain(
         metodo === 'afd' ? 'D1' : 'q18',
       );
+      expect(host.querySelector('.recorrido tr[aria-current="step"] td')?.textContent?.trim()).toBe(
+        '0',
+      );
+      expect(host.querySelector('.estados-del-paso')?.textContent).toContain('q0');
+      const botonSiguiente = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+        b.textContent?.includes('Siguiente'),
+      )!;
+      const botonAnterior = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+        b.textContent?.includes('Anterior'),
+      )!;
+      expect(botonAnterior.disabled).toBe(true);
+      await pulsar('Siguiente');
+      expect(host.querySelector('.recorrido tr[aria-current="step"] td')?.textContent?.trim()).toBe(
+        '8',
+      );
+      expect(host.querySelector('.estados-del-paso')?.textContent).toContain('q18');
+      expect(botonSiguiente.disabled).toBe(true);
+      expect(host.querySelector('.fragmentos-cadena')?.textContent).toContain('PED-1234');
+      await pulsar('Anterior');
+      expect(host.querySelector('.recorrido tr[aria-current="step"] td')?.textContent?.trim()).toBe(
+        '0',
+      );
+      await pulsar('Siguiente');
+      await pulsar('Reiniciar');
+      expect(host.querySelector('.recorrido tr[aria-current="step"] td')?.textContent?.trim()).toBe(
+        '0',
+      );
+      await pulsar('Siguiente');
       await pestañas.selectTab({ label: 'Editor del autómata' });
       expect(host.querySelector<HTMLInputElement>('[formcontrolname="cadena"]')!.value).toBe(
         'PED-1234',
       );
+      await pulsar('Analizar cadena');
+      TestBed.inject(HttpTestingController)
+        .expectOne('http://127.0.0.1:8000/automatas/analizar')
+        .flush(respuesta(metodo));
+      await fixture.whenStable();
+      expect(host.querySelector('.recorrido tr[aria-current="step"] td')?.textContent?.trim()).toBe(
+        '0',
+      );
+      await pestañas.selectTab({ label: 'Editor del autómata' });
       await pulsar('Borrar configuración');
       expect(host.querySelector<HTMLInputElement>('[formcontrolname="estados"]')!.value).toBe('');
       await pestañas.selectTab({ label: 'Diagramas y análisis' });
@@ -136,5 +173,23 @@ describe('App', () => {
     await pulsar('Analizar cadena');
     TestBed.inject(HttpTestingController).expectNone('http://127.0.0.1:8000/automatas/analizar');
     expect(await (await pestañas.getSelectedTab()).getLabel()).toBe('Editor del autómata');
+  });
+  it('representa el estado trampa como subconjunto vacío al avanzar', async () => {
+    const { fixture, host, pulsar } = await crear();
+    await pulsar('Ejemplo de inventario');
+    await pulsar('Analizar cadena');
+    const datos = respuesta('afd');
+    datos.aceptada = false;
+    datos.afd!.estados.push({ id: 'DT', componentes: [] });
+    datos.afd!.estado_trampa = 'DT';
+    datos.recorrido_afd![1].estado = 'DT';
+    TestBed.inject(HttpTestingController)
+      .expectOne('http://127.0.0.1:8000/automatas/analizar')
+      .flush(datos);
+    await fixture.whenStable();
+    await pulsar('Siguiente');
+    expect(host.querySelector('.estados-del-paso')?.textContent).toContain('∅');
+    expect(host.querySelector('.estados-del-paso')?.textContent).toContain('DT');
+    expect(host.querySelector('.resultado')?.textContent).toContain('Cadena rechazada');
   });
 });

@@ -60,6 +60,11 @@
 
     <mat-tab label="Diagramas y análisis" [disabled]="cargando()">
       <div class="analisis contenido-pestaña">
+        @if (pasosRecorrido().length > 0) {
+          <div class="barra-recorrido">
+            <ng-container [ngTemplateOutlet]="controlesRecorrido"></ng-container>
+          </div>
+        }
         <section class="visualizaciones" aria-label="Diagramas de los autómatas">
           <mat-card appearance="outlined">
             <mat-card-header>
@@ -70,6 +75,7 @@
                 @defer (when pestanaActiva() === 1) {
                   <app-diagrama-automata
                     [automata]="automata"
+                    [estadosActivos]="estadosOriginalesActivos()"
                     [activo]="pestanaActiva() === 1"
                     distribucion="niveles"
                   ></app-diagrama-automata>
@@ -95,6 +101,7 @@
                 @defer (when pestanaActiva() === 1) {
                   <app-diagrama-automata
                     [automata]="automataAfd"
+                    [estadosActivos]="estadosAfdActivos()"
                     [estadosAfd]="resultado()?.afd?.estados ?? []"
                     [estadoTrampa]="resultado()?.afd?.estado_trampa ?? null"
                     [activo]="pestanaActiva() === 1"
@@ -162,6 +169,10 @@
                 <div role="status">
                   <h3>{{ respuesta.aceptada ? 'Cadena aceptada' : 'Cadena rechazada' }}</h3>
                   <p>
+                    Este resultado corresponde a la cadena completa. Los controles muestran sus
+                    pasos intermedios.
+                  </p>
+                  <p>
                     <strong>Cadena analizada:</strong>
                     {{ respuesta.cadena === '' ? 'ε (cadena vacía)' : respuesta.cadena }}
                   </p>
@@ -189,6 +200,9 @@
               ></mat-card-header
             >
             <mat-card-content>
+              @if (pasosRecorrido().length > 0) {
+                <ng-container [ngTemplateOutlet]="controlesRecorrido"></ng-container>
+              }
               @if (resultado(); as respuesta) {
                 @if (respuesta.metodo === 'afd' && respuesta.recorrido_afd; as pasos) {
                   <div class="tabla-scroll">
@@ -205,7 +219,10 @@
                       </thead>
                       <tbody>
                         @for (paso of pasos; track $index) {
-                          <tr>
+                          <tr
+                            [class.paso-actual]="$index === indicePaso()"
+                            [attr.aria-current]="$index === indicePaso() ? 'step' : null"
+                          >
                             <td>{{ paso.posicion }}</td>
                             <td>{{ paso.simbolo === null ? 'Inicio' : paso.simbolo }}</td>
                             <td>{{ paso.estado ?? 'Sin transición' }}</td>
@@ -230,7 +247,10 @@
                       </thead>
                       <tbody>
                         @for (paso of pasos; track $index) {
-                          <tr>
+                          <tr
+                            [class.paso-actual]="$index === indicePaso()"
+                            [attr.aria-current]="$index === indicePaso() ? 'step' : null"
+                          >
                             <td>{{ paso.posicion }}</td>
                             <td>{{ paso.simbolo === null ? 'Inicio' : paso.simbolo }}</td>
                             <td>
@@ -258,3 +278,66 @@
     </mat-tab>
   </mat-tab-group>
 </main>
+
+<ng-template #controlesRecorrido>
+  <div class="controles-recorrido">
+    <div class="botones-recorrido">
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="reiniciarRecorrido()"
+        [disabled]="indicePaso() === 0"
+      >
+        Reiniciar
+      </button>
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="pasoAnterior()"
+        [disabled]="indicePaso() === 0"
+      >
+        Anterior
+      </button>
+      <button
+        mat-flat-button
+        type="button"
+        (click)="pasoSiguiente()"
+        [disabled]="indicePaso() >= pasosRecorrido().length - 1"
+      >
+        Siguiente
+      </button>
+    </div>
+    @if (pasoActual(); as paso) {
+      <p class="estado-paso" role="status">
+        <strong>Paso {{ indicePaso() }} de {{ pasosRecorrido().length - 1 }}.</strong>
+        {{
+          paso.simbolo === null
+            ? 'Inicio: aún no se consumen símbolos.'
+            : 'Símbolo consumido: ' + paso.simbolo
+        }}
+        @if (indicePaso() === pasosRecorrido().length - 1) {
+          Recorrido terminado.
+        }
+      </p>
+      <p class="fragmentos-cadena">
+        <span
+          ><strong>Consumido:</strong> <code>{{ cadenaConsumida() || 'ε' }}</code></span
+        >
+        <span
+          ><strong>Pendiente:</strong> <code>{{ cadenaPendiente() || 'ε' }}</code></span
+        >
+      </p>
+      <p class="estados-del-paso">
+        <strong>Estados del original:</strong>
+        {{ paso.estadosOriginales.length ? '{' + paso.estadosOriginales.join(', ') + '}' : '∅' }}
+        @if (resultado()?.metodo === 'afd') {
+          · <strong>Estado del AFD:</strong> {{ paso.estadoAfd ?? 'Sin transición' }}
+        }
+      </p>
+      <p class="nota-recorrido">
+        Los estados de este paso tienen un halo amarillo. En el método AFD, el original muestra los
+        componentes del subconjunto seleccionado.
+      </p>
+    }
+  </div>
+</ng-template>

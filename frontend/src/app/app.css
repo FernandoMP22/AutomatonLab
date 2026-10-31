@@ -161,3 +161,36 @@ mat-card-content p {
   overflow-x: auto;
   max-width: 100%;
 }
+
+.barra-recorrido {
+  position: sticky;
+  top: 8px;
+  z-index: 3;
+}
+.controles-recorrido {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  background-color: var(--mat-sys-surface-container);
+}
+.controles-recorrido p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.botones-recorrido,
+.fragmentos-cadena {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.nota-recorrido {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+}
+.tabla-estados tr.paso-actual td {
+  background-color: #fff3c4;
+  color: #352700;
+  font-weight: 600;
+}

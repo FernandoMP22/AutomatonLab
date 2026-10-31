@@ -1,34 +1,14 @@
-import {
-  Component,
-  computed,
-  ElementRef,
-  input,
-  signal,
-  ViewChild,
-} from '@angular/core';
+import { Component, computed, ElementRef, input, signal, ViewChild } from '@angular/core';
 
-import type {
-  AfterViewInit,
-  OnChanges,
-  OnDestroy,
-  SimpleChanges,
-} from '@angular/core';
+import type { AfterViewInit, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 
 import cytoscape from 'cytoscape';
 
-import type {
-  Core,
-  EdgeSingular,
-  ElementDefinition,
-  LayoutOptions,
-} from 'cytoscape';
+import type { Core, EdgeSingular, ElementDefinition, LayoutOptions } from 'cytoscape';
 
-import type {
-  AutomataEntrada,
-  EstadoAFDSalida,
-} from '../../models/automata';
+import type { AutomataEntrada, EstadoAFDSalida } from '../../models/automata';
 
 import { agruparTransiciones } from './transiciones-diagrama';
 import type { ConexionDiagrama } from './transiciones-diagrama';
@@ -39,17 +19,15 @@ import type { ConexionDiagrama } from './transiciones-diagrama';
   templateUrl: './diagrama-automata.html',
   styleUrl: './diagrama-automata.css',
 })
-export class DiagramaAutomata
-  implements AfterViewInit, OnChanges, OnDestroy
-{
+export class DiagramaAutomata implements AfterViewInit, OnChanges, OnDestroy {
   readonly automata = input.required<AutomataEntrada>();
   readonly estadosAfd = input<EstadoAFDSalida[]>([]);
   readonly estadoTrampa = input<string | null>(null);
 
-  readonly distribucion =
-    input<'horizontal' | 'niveles'>('niveles');
+  readonly distribucion = input<'horizontal' | 'niveles'>('niveles');
 
   readonly activo = input(true);
+  readonly estadosActivos = input<string[]>([]);
 
   @ViewChild('contenedor')
   private contenedor?: ElementRef<HTMLDivElement>;
@@ -62,22 +40,16 @@ export class DiagramaAutomata
   private fotograma?: number;
   private fotogramaDetalle?: number;
 
-  private readonly estructura = computed(() =>
-    this.calcularEstructura(this.automata()),
-  );
+  private readonly estructura = computed(() => this.calcularEstructura(this.automata()));
 
   protected readonly vistaParcial = signal(false);
 
-  protected readonly posicionDetalle =
-    signal<{ x: number; y: number } | null>(null);
+  protected readonly posicionDetalle = signal<{ x: number; y: number } | null>(null);
 
-  protected readonly conexionSeleccionada =
-    signal<ConexionDiagrama | null>(null);
+  protected readonly conexionSeleccionada = signal<ConexionDiagrama | null>(null);
 
   protected readonly conexionesCompactas = computed(() =>
-    agruparTransiciones(
-      this.automata().transiciones,
-    ).filter(
+    agruparTransiciones(this.automata().transiciones).filter(
       (conexion) => conexion.simbolos.length > 3,
     ),
   );
@@ -97,10 +69,7 @@ export class DiagramaAutomata
 
     if (this.contenedor) {
       this.observador = new ResizeObserver(() => {
-        if (
-          !this.activo() ||
-          !this.contenedor?.nativeElement.clientWidth
-        ) {
+        if (!this.activo() || !this.contenedor?.nativeElement.clientWidth) {
           return;
         }
 
@@ -111,33 +80,22 @@ export class DiagramaAutomata
         }
       });
 
-      this.observador.observe(
-        this.contenedor.nativeElement,
-      );
+      this.observador.observe(this.contenedor.nativeElement);
     }
   }
 
   ngOnChanges(cambios: SimpleChanges): void {
-    if (
-      cambios['automata'] ||
-      cambios['estadosAfd'] ||
-      cambios['estadoTrampa']
-    ) {
+    if (cambios['automata'] || cambios['estadosAfd'] || cambios['estadoTrampa']) {
       this.cerrarDetalle();
     }
+    if (!this.contenedor || !this.activo()) return;
 
-    if (!this.contenedor || !this.activo()) {
-      return;
-    }
-
-    // Conserva las posiciones al regresar a la pestaña.
-    if (
-      this.grafo &&
-      Object.keys(cambios).every(
-        (clave) => clave === 'activo',
-      )
-    ) {
-      this.ajustarVista();
+    const soloPresentacion = Object.keys(cambios).every(
+      (clave) => clave === 'activo' || clave === 'estadosActivos',
+    );
+    if (this.grafo && soloPresentacion) {
+      this.actualizarEstadosActivos();
+      if (cambios['activo']) this.ajustarVista();
     } else {
       this.programarDibujo();
     }
@@ -158,10 +116,18 @@ export class DiagramaAutomata
     this.grafo = undefined;
   }
 
+  private actualizarEstadosActivos(): void {
+    if (!this.grafo) return;
+    const activos = new Set(this.estadosActivos());
+    this.grafo.nodes().removeClass('paso-actual');
+    this.grafo
+      .nodes()
+      .filter((nodo) => activos.has(nodo.data('nombre')))
+      .addClass('paso-actual');
+  }
+
   protected obtenerEtiqueta(estado: string): string {
-    const estadoAfd = this.estadosAfd().find(
-      (elemento) => elemento.id === estado,
-    );
+    const estadoAfd = this.estadosAfd().find((elemento) => elemento.id === estado);
 
     if (!estadoAfd) {
       return estado;
@@ -178,12 +144,7 @@ export class DiagramaAutomata
     const grafo = this.grafo;
     const contenedor = this.contenedor?.nativeElement;
 
-    if (
-      !grafo ||
-      !contenedor ||
-      !this.activo() ||
-      contenedor.clientWidth === 0
-    ) {
+    if (!grafo || !contenedor || !this.activo() || contenedor.clientWidth === 0) {
       return;
     }
 
@@ -201,32 +162,23 @@ export class DiagramaAutomata
 
     const zoomCompleto = grafo.zoom();
 
-    const zoomLegible = Math.min(
-      1.35,
-      Math.max(0.85, zoomCompleto),
-    );
+    const zoomLegible = Math.min(1.35, Math.max(0.85, zoomCompleto));
 
     const esVistaParcial = zoomCompleto < 0.85;
 
     grafo.zoom(zoomLegible);
 
     if (esVistaParcial) {
-      const inicial =
-        grafo.getElementById('estado-0');
+      const inicial = grafo.getElementById('estado-0');
 
       const posicion = inicial.position();
 
-      const radio =
-        Number(inicial.data('tamano')) / 2;
+      const radio = Number(inicial.data('tamano')) / 2;
 
       grafo.pan({
-        x:
-          margen +
-          (radio - posicion.x) * zoomLegible,
+        x: margen + (radio - posicion.x) * zoomLegible,
 
-        y:
-          contenedor.clientHeight / 2 -
-          posicion.y * zoomLegible,
+        y: contenedor.clientHeight / 2 - posicion.y * zoomLegible,
       });
     } else {
       grafo.center();
@@ -253,21 +205,16 @@ export class DiagramaAutomata
     this.vistaParcial.set(false);
   }
 
-  protected mostrarConexion(
-    conexion: ConexionDiagrama,
-  ): void {
+  protected mostrarConexion(conexion: ConexionDiagrama): void {
     this.conexionSeleccionada.set(conexion);
 
-    this.grafo
-      ?.edges()
-      .removeClass('seleccionada');
+    this.grafo?.edges().removeClass('seleccionada');
 
     this.grafo
       ?.edges()
       .filter(
         (arista) =>
-          arista.data('origen') === conexion.origen &&
-          arista.data('destino') === conexion.destino,
+          arista.data('origen') === conexion.origen && arista.data('destino') === conexion.destino,
       )
       .addClass('seleccionada');
 
@@ -276,9 +223,7 @@ export class DiagramaAutomata
     this.programarDetalle();
   }
 
-  protected seleccionarDesdeLista(
-    evento: Event,
-  ): void {
+  protected seleccionarDesdeLista(evento: Event): void {
     const selector = evento.target;
 
     if (!(selector instanceof HTMLSelectElement)) {
@@ -290,9 +235,7 @@ export class DiagramaAutomata
       return;
     }
 
-    const conexion = this.conexionesCompactas()[
-      Number(selector.value)
-    ];
+    const conexion = this.conexionesCompactas()[Number(selector.value)];
 
     if (conexion) {
       this.mostrarConexion(conexion);
@@ -312,8 +255,7 @@ export class DiagramaAutomata
   }
 
   protected indiceSeleccionado(): string {
-    const seleccionada =
-      this.conexionSeleccionada();
+    const seleccionada = this.conexionSeleccionada();
 
     if (!seleccionada) {
       return '';
@@ -321,8 +263,7 @@ export class DiagramaAutomata
 
     const indice = this.conexionesCompactas().findIndex(
       (conexion) =>
-        conexion.origen === seleccionada.origen &&
-        conexion.destino === seleccionada.destino,
+        conexion.origen === seleccionada.origen && conexion.destino === seleccionada.destino,
     );
 
     return indice < 0 ? '' : String(indice);
@@ -337,16 +278,11 @@ export class DiagramaAutomata
       this.fotogramaDetalle = undefined;
     }
 
-    this.grafo
-      ?.edges()
-      .removeClass('seleccionada');
+    this.grafo?.edges().removeClass('seleccionada');
   }
 
   private programarDetalle(): void {
-    if (
-      !this.conexionSeleccionada() ||
-      this.fotogramaDetalle !== undefined
-    ) {
+    if (!this.conexionSeleccionada() || this.fotogramaDetalle !== undefined) {
       return;
     }
 
@@ -357,14 +293,11 @@ export class DiagramaAutomata
   }
 
   private posicionarDetalle(): void {
-    const conexion =
-      this.conexionSeleccionada();
+    const conexion = this.conexionSeleccionada();
 
-    const contenedor =
-      this.contenedor?.nativeElement;
+    const contenedor = this.contenedor?.nativeElement;
 
-    const panel =
-      this.detalleFlotante?.nativeElement;
+    const panel = this.detalleFlotante?.nativeElement;
 
     if (
       !conexion ||
@@ -404,29 +337,15 @@ export class DiagramaAutomata
     // Si no cabe arriba, prueba debajo.
     const arriba = punto.y - alto - separacion;
 
-    const y = arriba >= margen
-      ? arriba
-      : punto.y + separacion;
+    const y = arriba >= margen ? arriba : punto.y + separacion;
 
     const x = punto.x - ancho / 2;
 
     // Mantiene el cuadro dentro del lienzo.
     this.posicionDetalle.set({
-      x: Math.max(
-        margen,
-        Math.min(
-          x,
-          contenedor.clientWidth - ancho - margen,
-        ),
-      ),
+      x: Math.max(margen, Math.min(x, contenedor.clientWidth - ancho - margen)),
 
-      y: Math.max(
-        margen,
-        Math.min(
-          y,
-          contenedor.clientHeight - alto - margen,
-        ),
-      ),
+      y: Math.max(margen, Math.min(y, contenedor.clientHeight - alto - margen)),
     });
   }
 
@@ -441,23 +360,15 @@ export class DiagramaAutomata
     });
   }
 
-  private calcularEstructura(
-    entrada: AutomataEntrada,
-  ): {
+  private calcularEstructura(entrada: AutomataEntrada): {
     filas: number;
     niveles: number;
   } {
-    const niveles = new Map<string, number>([
-      [entrada.estado_inicial, 0],
-    ]);
+    const niveles = new Map<string, number>([[entrada.estado_inicial, 0]]);
 
     const pendientes = [entrada.estado_inicial];
 
-    for (
-      let indice = 0;
-      indice < pendientes.length;
-      indice++
-    ) {
+    for (let indice = 0; indice < pendientes.length; indice++) {
       const origen = pendientes[indice];
       const nivelActual = niveles.get(origen)!;
 
@@ -483,17 +394,13 @@ export class DiagramaAutomata
     for (const estado of entrada.estados) {
       const nivel = niveles.get(estado) ?? 0;
 
-      const cantidad =
-        (cantidades.get(nivel) ?? 0) + 1;
+      const cantidad = (cantidades.get(nivel) ?? 0) + 1;
 
       cantidades.set(nivel, cantidad);
 
       filas = Math.max(filas, cantidad);
 
-      cantidadNiveles = Math.max(
-        cantidadNiveles,
-        nivel + 1,
-      );
+      cantidadNiveles = Math.max(cantidadNiveles, nivel + 1);
     }
 
     return {
@@ -520,15 +427,9 @@ export class DiagramaAutomata
           x1: 0,
           y1: 0,
 
-          w: Math.max(
-            180,
-            (estructura.filas - 1) * 140,
-          ),
+          w: Math.max(180, (estructura.filas - 1) * 140),
 
-          h: Math.max(
-            280,
-            (estructura.niveles - 1) * 220,
-          ),
+          h: Math.max(280, (estructura.niveles - 1) * 220),
         },
 
         transform: (_nodo, posicion) => ({
@@ -546,18 +447,12 @@ export class DiagramaAutomata
       avoidOverlap: true,
       nodeDimensionsIncludeLabels: true,
 
-      sort: (a, b) =>
-        Number(a.data('orden')) -
-        Number(b.data('orden')),
+      sort: (a, b) => Number(a.data('orden')) - Number(b.data('orden')),
     };
   }
 
   private dibujar(): void {
-    if (
-      !this.contenedor ||
-      !this.activo() ||
-      this.contenedor.nativeElement.clientWidth === 0
-    ) {
+    if (!this.contenedor || !this.activo() || this.contenedor.nativeElement.clientWidth === 0) {
       return;
     }
 
@@ -568,9 +463,7 @@ export class DiagramaAutomata
     this.grafo = cytoscape({
       container: this.contenedor.nativeElement,
 
-      elements: this.crearElementos(
-        this.automata(),
-      ),
+      elements: this.crearElementos(this.automata()),
 
       layout: this.crearDistribucion(),
 
@@ -598,6 +491,14 @@ export class DiagramaAutomata
           },
         },
 
+        {
+          selector: 'node.paso-actual',
+          style: {
+            'underlay-color': '#ffb300',
+            'underlay-opacity': 0.4,
+            'underlay-padding': 10,
+          },
+        },
         {
           selector: 'node.inicial',
 
@@ -698,28 +599,21 @@ export class DiagramaAutomata
       ],
     });
 
-    this.grafo.on(
-      'tap',
-      'edge.compacta',
-      (evento) => {
-        const origen =
-          evento.target.data('origen');
+    this.actualizarEstadosActivos();
 
-        const destino =
-          evento.target.data('destino');
+    this.grafo.on('tap', 'edge.compacta', (evento) => {
+      const origen = evento.target.data('origen');
 
-        const conexion =
-          this.conexionesCompactas().find(
-            (elemento) =>
-              elemento.origen === origen &&
-              elemento.destino === destino,
-          );
+      const destino = evento.target.data('destino');
 
-        if (conexion) {
-          this.mostrarConexion(conexion);
-        }
-      },
-    );
+      const conexion = this.conexionesCompactas().find(
+        (elemento) => elemento.origen === origen && elemento.destino === destino,
+      );
+
+      if (conexion) {
+        this.mostrarConexion(conexion);
+      }
+    });
 
     this.grafo.on('tap', (evento) => {
       if (evento.target === this.grafo) {
@@ -727,46 +621,30 @@ export class DiagramaAutomata
       }
     });
 
-    this.grafo.on(
-      'pan zoom position render',
-      () => this.programarDetalle(),
-    );
+    this.grafo.on('pan zoom position render', () => this.programarDetalle());
 
     this.ajustarVista();
   }
 
-  private crearElementos(
-    entrada: AutomataEntrada,
-  ): ElementDefinition[] {
+  private crearElementos(entrada: AutomataEntrada): ElementDefinition[] {
     const elementos: ElementDefinition[] = [];
 
-    const identificadores =
-      new Map<string, string>();
+    const identificadores = new Map<string, string>();
 
     const estadosOrdenados = [
       entrada.estado_inicial,
 
-      ...entrada.estados.filter(
-        (estado) =>
-          estado !== entrada.estado_inicial,
-      ),
+      ...entrada.estados.filter((estado) => estado !== entrada.estado_inicial),
     ];
 
     estadosOrdenados.forEach((estado, indice) => {
       const id = `estado-${indice}`;
 
-      const etiqueta =
-        this.obtenerEtiqueta(estado);
+      const etiqueta = this.obtenerEtiqueta(estado);
 
       const clases: string[] = [];
 
-      const tamano = Math.max(
-        60,
-        Math.min(
-          180,
-          Array.from(etiqueta).length * 9 + 24,
-        ),
-      );
+      const tamano = Math.max(60, Math.min(180, Array.from(etiqueta).length * 9 + 24));
 
       identificadores.set(estado, id);
 
@@ -786,6 +664,7 @@ export class DiagramaAutomata
         data: {
           id,
           label: etiqueta,
+          nombre: estado,
           orden: indice,
           tamano,
         },
@@ -794,17 +673,11 @@ export class DiagramaAutomata
       });
     });
 
-    const niveles = new Map<string, number>([
-      [entrada.estado_inicial, 0],
-    ]);
+    const niveles = new Map<string, number>([[entrada.estado_inicial, 0]]);
 
     const pendientes = [entrada.estado_inicial];
 
-    for (
-      let indice = 0;
-      indice < pendientes.length;
-      indice++
-    ) {
+    for (let indice = 0; indice < pendientes.length; indice++) {
       const origen = pendientes[indice];
 
       for (const transicion of entrada.transiciones) {
@@ -814,10 +687,7 @@ export class DiagramaAutomata
 
         for (const destino of transicion.destinos) {
           if (!niveles.has(destino)) {
-            niveles.set(
-              destino,
-              niveles.get(origen)! + 1,
-            );
+            niveles.set(destino, niveles.get(origen)! + 1);
 
             pendientes.push(destino);
           }
@@ -825,36 +695,26 @@ export class DiagramaAutomata
       }
     }
 
-    const conexiones = agruparTransiciones(
-      entrada.transiciones,
-    );
+    const conexiones = agruparTransiciones(entrada.transiciones);
 
     conexiones.forEach((conexion, indice) => {
       const clases: string[] = [];
 
-      const esCompacta =
-        conexion.simbolos.length > 3;
+      const esCompacta = conexion.simbolos.length > 3;
 
       if (esCompacta) {
         clases.push('compacta');
       }
 
-      const esBucle =
-        conexion.origen === conexion.destino;
+      const esBucle = conexion.origen === conexion.destino;
 
-      const nivelOrigen =
-        niveles.get(conexion.origen) ?? 0;
+      const nivelOrigen = niveles.get(conexion.origen) ?? 0;
 
-      const nivelDestino =
-        niveles.get(conexion.destino) ?? 0;
+      const nivelDestino = niveles.get(conexion.destino) ?? 0;
 
-      const esRetorno =
-        !esBucle && nivelDestino <= nivelOrigen;
+      const esRetorno = !esBucle && nivelDestino <= nivelOrigen;
 
-      if (
-        this.distribucion() === 'niveles' &&
-        esRetorno
-      ) {
+      if (this.distribucion() === 'niveles' && esRetorno) {
         clases.push('curva');
       }
 
@@ -866,11 +726,9 @@ export class DiagramaAutomata
         data: {
           id: `conexion-${indice}`,
 
-          source:
-            identificadores.get(conexion.origen)!,
+          source: identificadores.get(conexion.origen)!,
 
-          target:
-            identificadores.get(conexion.destino)!,
+          target: identificadores.get(conexion.destino)!,
 
           origen: conexion.origen,
 
@@ -880,9 +738,7 @@ export class DiagramaAutomata
             ? `${conexion.simbolos.length} símbolos ▸`
             : conexion.simbolos.join(', '),
 
-          curvatura:
-            70 +
-            Math.abs(nivelOrigen - nivelDestino) * 25,
+          curvatura: 70 + Math.abs(nivelOrigen - nivelDestino) * 25,
         },
 
         classes: clases.join(' '),

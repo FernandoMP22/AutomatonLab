@@ -14,13 +14,9 @@
         class="detalle-transicion"
         [style.left.px]="posicionDetalle()?.x ?? 8"
         [style.top.px]="posicionDetalle()?.y ?? 8"
-        [style.visibility]="
-          posicionDetalle() ? 'visible' : 'hidden'
-        "
+        [style.visibility]="posicionDetalle() ? 'visible' : 'hidden'"
         (keydown.escape)="cerrarDetalle()"
-        [class.detalle-trampa]="
-          conexion.destino === estadoTrampa()
-        "
+        [class.detalle-trampa]="conexion.destino === estadoTrampa()"
         role="region"
         aria-label="Detalle de la transición"
       >
@@ -32,13 +28,7 @@
             {{ obtenerEtiqueta(conexion.destino) }}
           </h3>
 
-          <button
-            mat-button
-            type="button"
-            (click)="cerrarDetalle()"
-          >
-            Cerrar
-          </button>
+          <button mat-button type="button" (click)="cerrarDetalle()">Cerrar</button>
         </div>
 
         <p role="status">
@@ -46,14 +36,8 @@
           símbolos permitidos para esta transición.
         </p>
 
-        <ul
-          class="lista-simbolos"
-          aria-label="Símbolos permitidos"
-        >
-          @for (
-            simbolo of conexion.simbolos;
-            track simbolo
-          ) {
+        <ul class="lista-simbolos" aria-label="Símbolos permitidos">
+          @for (simbolo of conexion.simbolos; track simbolo) {
             <li>{{ simbolo }}</li>
           }
         </ul>
@@ -63,29 +47,21 @@
 
   @if (conexionesCompactas().length > 0) {
     <p class="leyenda">
-      Pulsa una flecha con la etiqueta «símbolos ▸»
-      para ver todos sus símbolos junto a la conexión.
+      Pulsa una flecha con la etiqueta «símbolos ▸» para ver todos sus símbolos junto a la conexión.
       Pulsa el fondo para cerrar el cuadro.
     </p>
 
     <details class="selector-transicion">
-      <summary>
-        Elegir una transición desde una lista
-      </summary>
+      <summary>Elegir una transición desde una lista</summary>
 
       <select
         aria-label="Transición con símbolos ocultos"
         [value]="indiceSeleccionado()"
         (change)="seleccionarDesdeLista($event)"
       >
-        <option value="">
-          Selecciona una transición
-        </option>
+        <option value="">Selecciona una transición</option>
 
-        @for (
-          conexion of conexionesCompactas();
-          track $index
-        ) {
+        @for (conexion of conexionesCompactas(); track $index) {
           <option [value]="$index">
             {{ obtenerEtiqueta(conexion.origen) }}
             →
@@ -98,34 +74,19 @@
   }
 
   <div class="herramientas">
-    <button
-      mat-stroked-button
-      type="button"
-      (click)="ajustarVista()"
-    >
-      {{
-        distribucion() === 'niveles'
-          ? 'Vista legible'
-          : 'Ajustar vista'
-      }}
+    <button mat-stroked-button type="button" (click)="ajustarVista()">
+      {{ distribucion() === 'niveles' ? 'Vista legible' : 'Ajustar vista' }}
     </button>
 
     @if (distribucion() === 'niveles') {
-      <button
-        mat-stroked-button
-        type="button"
-        (click)="verTodo()"
-      >
-        Ver todo
-      </button>
+      <button mat-stroked-button type="button" (click)="verTodo()">Ver todo</button>
     }
   </div>
 
   @if (vistaParcial()) {
     <p class="aviso-vista" role="status">
-      La vista mantiene los nombres legibles y puede
-      mostrar solo una parte del autómata.
-      Arrastra el fondo para recorrerlo o pulsa Ver todo.
+      La vista mantiene los nombres legibles y puede mostrar solo una parte del autómata. Arrastra
+      el fondo para recorrerlo o pulsa Ver todo.
     </p>
   }
 
@@ -136,16 +97,14 @@
       (azul).
     </strong>
 
-    Los estados finales tienen doble borde.
+    Los estados finales tienen doble borde. Los estados del paso actual tienen un halo amarillo.
 
     @if (estadoTrampa()) {
       <strong class="leyenda-trampa">
-        El estado trampa ∅ y sus transiciones
-        se muestran en rojo.
+        El estado trampa ∅ y sus transiciones se muestran en rojo.
       </strong>
     }
 
-    Puedes arrastrar los estados, desplazar el fondo
-    y utilizar la rueda para acercar o alejar.
+    Puedes arrastrar los estados, desplazar el fondo y utilizar la rueda para acercar o alejar.
   </p>
 </div>
