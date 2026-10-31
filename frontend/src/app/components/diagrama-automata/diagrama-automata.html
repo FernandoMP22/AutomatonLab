@@ -1,11 +1,101 @@
 <div class="diagrama">
-  <div
-    #contenedor
-    class="lienzo"
-    [style.height.px]="alturaLienzo()"
-    role="img"
-    aria-label="Diagrama del autómata con estados y transiciones"
-  ></div>
+  <div class="marco-lienzo">
+    <div
+      #contenedor
+      class="lienzo"
+      [style.height.px]="alturaLienzo()"
+      role="img"
+      aria-label="Diagrama del autómata con estados y transiciones"
+    ></div>
+
+    @if (conexionSeleccionada(); as conexion) {
+      <section
+        #detalleFlotante
+        class="detalle-transicion"
+        [style.left.px]="posicionDetalle()?.x ?? 8"
+        [style.top.px]="posicionDetalle()?.y ?? 8"
+        [style.visibility]="
+          posicionDetalle() ? 'visible' : 'hidden'
+        "
+        (keydown.escape)="cerrarDetalle()"
+        [class.detalle-trampa]="
+          conexion.destino === estadoTrampa()
+        "
+        role="region"
+        aria-label="Detalle de la transición"
+      >
+        <div class="encabezado-detalle">
+          <h3>
+            Transición
+            {{ obtenerEtiqueta(conexion.origen) }}
+            →
+            {{ obtenerEtiqueta(conexion.destino) }}
+          </h3>
+
+          <button
+            mat-button
+            type="button"
+            (click)="cerrarDetalle()"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <p role="status">
+          {{ conexion.simbolos.length }}
+          símbolos permitidos para esta transición.
+        </p>
+
+        <ul
+          class="lista-simbolos"
+          aria-label="Símbolos permitidos"
+        >
+          @for (
+            simbolo of conexion.simbolos;
+            track simbolo
+          ) {
+            <li>{{ simbolo }}</li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+
+  @if (conexionesCompactas().length > 0) {
+    <p class="leyenda">
+      Pulsa una flecha con la etiqueta «símbolos ▸»
+      para ver todos sus símbolos junto a la conexión.
+      Pulsa el fondo para cerrar el cuadro.
+    </p>
+
+    <details class="selector-transicion">
+      <summary>
+        Elegir una transición desde una lista
+      </summary>
+
+      <select
+        aria-label="Transición con símbolos ocultos"
+        [value]="indiceSeleccionado()"
+        (change)="seleccionarDesdeLista($event)"
+      >
+        <option value="">
+          Selecciona una transición
+        </option>
+
+        @for (
+          conexion of conexionesCompactas();
+          track $index
+        ) {
+          <option [value]="$index">
+            {{ obtenerEtiqueta(conexion.origen) }}
+            →
+            {{ obtenerEtiqueta(conexion.destino) }}
+            ({{ conexion.simbolos.length }} símbolos)
+          </option>
+        }
+      </select>
+    </details>
+  }
 
   <div class="herramientas">
     <button
@@ -13,7 +103,11 @@
       type="button"
       (click)="ajustarVista()"
     >
-      {{ distribucion() === 'niveles' ? 'Vista legible' : 'Ajustar vista' }}
+      {{
+        distribucion() === 'niveles'
+          ? 'Vista legible'
+          : 'Ajustar vista'
+      }}
     </button>
 
     @if (distribucion() === 'niveles') {
@@ -29,26 +123,29 @@
 
   @if (vistaParcial()) {
     <p class="aviso-vista" role="status">
-      La vista mantiene los nombres legibles y puede mostrar solo una parte
-      del autómata. Arrastra el fondo para recorrerlo o pulsa Ver todo.
+      La vista mantiene los nombres legibles y puede
+      mostrar solo una parte del autómata.
+      Arrastra el fondo para recorrerlo o pulsa Ver todo.
     </p>
   }
 
   <p class="leyenda">
     <strong class="leyenda-inicial">
       Estado inicial:
-      {{ obtenerEtiqueta(automata().estado_inicial) }} (azul).
+      {{ obtenerEtiqueta(automata().estado_inicial) }}
+      (azul).
     </strong>
 
     Los estados finales tienen doble borde.
 
     @if (estadoTrampa()) {
       <strong class="leyenda-trampa">
-        El estado trampa ∅ y sus transiciones se muestran en rojo.
+        El estado trampa ∅ y sus transiciones
+        se muestran en rojo.
       </strong>
     }
 
-    Puedes arrastrar los estados, desplazar el fondo y utilizar
-    la rueda para acercar o alejar.
+    Puedes arrastrar los estados, desplazar el fondo
+    y utilizar la rueda para acercar o alejar.
   </p>
 </div>

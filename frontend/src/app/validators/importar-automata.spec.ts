@@ -33,9 +33,7 @@ describe('leerAutomata', () => {
   });
 
   it('rechaza texto que no es JSON', () => {
-    expect(() => leerAutomata('esto no es JSON')).toThrow(
-      'El texto no contiene un JSON válido.',
-    );
+    expect(() => leerAutomata('esto no es JSON')).toThrow('El texto no contiene un JSON válido.');
   });
 
   it('rechaza null como definición del autómata', () => {
@@ -102,7 +100,7 @@ describe('leerAutomata', () => {
     };
 
     expect(() => leerAutomata(JSON.stringify(entrada))).toThrow(
-      'Este editor requiere nombres de estados sin comas ni espacios al principio o al final.',
+      'El editor no admite comas ni espacios exteriores en estados o símbolos.',
     );
   });
 });

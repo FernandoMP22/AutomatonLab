@@ -1,95 +1,43 @@
-import type { AutomataEntrada } from './automata';
+import type { AutomataEntrada, TransicionEntrada } from './automata';
 
-// Dos rombos conectados mediante ε y un retorno al inicio.
-//
-// Lenguaje:
-// ((00|11)(00|11)01)*(00|11)(00|11)0
-export const EJEMPLO_DIEZ_ESTADOS: AutomataEntrada = {
-  numero_nodos: 10,
+const digitos = Array.from({ length: 10 }, (_, indice) => String(indice));
+const transicionesNumero: TransicionEntrada[] = [];
 
-  estados: [
-    'q0',
-    'q1',
-    'q2',
-    'q3',
-    'q4',
-    'q5',
-    'q6',
-    'q7',
-    'q8',
-    'q9',
-  ],
+for (let origen = 14; origen < 18; origen++) {
+  for (const simbolo of digitos) {
+    transicionesNumero.push({
+      origen: `q${origen}`,
+      simbolo,
+      destinos: [`q${origen + 1}`],
+    });
+  }
+}
 
-  alfabeto: ['0', '1'],
-
+// Reconoce códigos de pedido, devolución o compra con cuatro dígitos.
+// Lenguaje: (PED|DEV|COM)-[0-9]{4}
+export const EJEMPLO_INVENTARIO: AutomataEntrada = {
+  numero_nodos: 19,
+  estados: Array.from({ length: 19 }, (_, indice) => `q${indice}`),
+  alfabeto: ['P', 'E', 'D', 'V', 'C', 'O', 'M', '-', ...digitos],
   estado_inicial: 'q0',
-
-  estados_finales: ['q9'],
-
+  estados_finales: ['q18'],
   transiciones: [
-    {
-      origen: 'q0',
-      simbolo: '0',
-      destinos: ['q1'],
-    },
-    {
-      origen: 'q0',
-      simbolo: '1',
-      destinos: ['q2'],
-    },
-    {
-      origen: 'q1',
-      simbolo: '0',
-      destinos: ['q3'],
-    },
-    {
-      origen: 'q2',
-      simbolo: '1',
-      destinos: ['q3'],
-    },
-    {
-      origen: 'q3',
-      simbolo: 'ε',
-      destinos: ['q4'],
-    },
-    {
-      origen: 'q4',
-      simbolo: '0',
-      destinos: ['q5'],
-    },
-    {
-      origen: 'q4',
-      simbolo: '1',
-      destinos: ['q6'],
-    },
-    {
-      origen: 'q5',
-      simbolo: '0',
-      destinos: ['q7'],
-    },
-    {
-      origen: 'q6',
-      simbolo: '1',
-      destinos: ['q7'],
-    },
-    {
-      origen: 'q7',
-      simbolo: 'ε',
-      destinos: ['q8'],
-    },
-    {
-      origen: 'q8',
-      simbolo: '0',
-      destinos: ['q9'],
-    },
-    {
-      origen: 'q9',
-      simbolo: '1',
-      destinos: ['q0'],
-    },
+    { origen: 'q0', simbolo: 'ε', destinos: ['q1', 'q5', 'q9'] },
+    { origen: 'q1', simbolo: 'P', destinos: ['q2'] },
+    { origen: 'q2', simbolo: 'E', destinos: ['q3'] },
+    { origen: 'q3', simbolo: 'D', destinos: ['q4'] },
+    { origen: 'q5', simbolo: 'D', destinos: ['q6'] },
+    { origen: 'q6', simbolo: 'E', destinos: ['q7'] },
+    { origen: 'q7', simbolo: 'V', destinos: ['q8'] },
+    { origen: 'q9', simbolo: 'C', destinos: ['q10'] },
+    { origen: 'q10', simbolo: 'O', destinos: ['q11'] },
+    { origen: 'q11', simbolo: 'M', destinos: ['q12'] },
+    { origen: 'q4', simbolo: 'ε', destinos: ['q13'] },
+    { origen: 'q8', simbolo: 'ε', destinos: ['q13'] },
+    { origen: 'q12', simbolo: 'ε', destinos: ['q13'] },
+    { origen: 'q13', simbolo: '-', destinos: ['q14'] },
+    ...transicionesNumero,
   ],
-
-  cadena: '00110',
-
+  cadena: 'PED-1234',
   metodo: 'afd',
 };

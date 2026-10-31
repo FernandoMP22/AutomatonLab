@@ -7,7 +7,8 @@
     <summary>Cargar un ejemplo desde JSON</summary>
 
     <p class="nota">
-      Pega una definición completa o carga el ejemplo de dos rombos.
+      Pega una definición completa o carga
+      el ejemplo de inventario.
     </p>
 
     <mat-form-field appearance="outline">
@@ -18,7 +19,6 @@
         rows="8"
         class="texto-json"
         [formControl]="textoEjemplo"
-        [readonly]="cargando()"
       ></textarea>
     </mat-form-field>
 
@@ -66,13 +66,13 @@
       mat-button
       type="button"
       [disabled]="cargando()"
-      (click)="cargarEjemploDiezEstados()"
+      (click)="cargarEjemploInventario()"
     >
-      Ejemplo de 10 estados · Dos rombos
+      Ejemplo de inventario
     </button>
   </div>
 
-  <fieldset [disabled]="cargando()">
+  <fieldset>
     <mat-form-field appearance="outline">
       <mat-label>Número de nodos</mat-label>
 
@@ -105,8 +105,8 @@
     </button>
 
     <p class="nota">
-      Genera q0, q1… Selecciona q0 como inicial y vacía
-      finales y conexiones.
+      Genera q0, q1… Selecciona q0 como inicial
+      y vacía finales y conexiones.
     </p>
 
     <mat-form-field appearance="outline">
@@ -152,10 +152,7 @@
     <mat-form-field appearance="outline">
       <mat-label>Estado inicial</mat-label>
 
-      <mat-select
-        [disabled]="cargando()"
-        formControlName="estado_inicial"
-      >
+      <mat-select formControlName="estado_inicial">
         @for (estado of estadosDisponibles; track estado) {
           <mat-option [value]="estado">
             {{ estado }}
@@ -176,7 +173,6 @@
       <mat-label>Estados finales</mat-label>
 
       <mat-select
-        [disabled]="cargando()"
         formControlName="estados_finales"
         multiple
       >
@@ -205,10 +201,7 @@
     <mat-form-field appearance="outline">
       <mat-label>Método de solución</mat-label>
 
-      <mat-select
-        [disabled]="cargando()"
-        formControlName="metodo"
-      >
+      <mat-select formControlName="metodo">
         <mat-option value="afnde">
           Simular AFND-ε
         </mat-option>
@@ -219,13 +212,57 @@
       </mat-select>
     </mat-form-field>
   </fieldset>
+
+  @let errores = erroresValidacion;
+
+  @if (errores.length > 0) {
+    <section
+      class="errores-validacion"
+      aria-labelledby="titulo-errores"
+    >
+      <h3 id="titulo-errores">
+        Revisa la configuración
+      </h3>
+
+      <ul>
+        @for (error of errores; track $index) {
+          <li>{{ error }}</li>
+        }
+      </ul>
+    </section>
+  }
+
+  <button
+    mat-flat-button
+    type="submit"
+    [disabled]="
+      cargando() ||
+      formulario.invalid ||
+      errores.length > 0
+    "
+  >
+    {{ cargando() ? 'Analizando…' : 'Analizar cadena' }}
+  </button>
+
+  @if (erroresApi().length > 0) {
+    <div class="errores-validacion" role="alert">
+      <h3>No se pudo realizar el análisis</h3>
+
+      <ul>
+        @for (error of erroresApi(); track $index) {
+          <li>{{ error }}</li>
+        }
+      </ul>
+    </div>
+  }
 </form>
 
 <ng-template #tablaTransiciones>
   <div class="editor-tabla">
     <p class="nota">
       Selecciona uno o varios destinos por celda.
-      Vacía significa sin transición; ε no consume símbolos.
+      Vacía significa sin transición;
+      ε no consume símbolos.
     </p>
 
     <div class="tabla-scroll">
@@ -238,14 +275,20 @@
           <tr>
             <th scope="col">Origen</th>
 
-            @for (simbolo of simbolosDisponibles; track simbolo) {
+            @for (
+              simbolo of simbolosDisponibles;
+              track simbolo
+            ) {
               <th scope="col">{{ simbolo }}</th>
             }
           </tr>
         </thead>
 
         <tbody>
-          @for (estado of estadosDisponibles; track estado) {
+          @for (
+            estado of estadosDisponibles;
+            track estado
+          ) {
             <tr>
               <th scope="row">{{ estado }}</th>
 
@@ -308,40 +351,8 @@
     </button>
 
     <p class="nota">
-      Después de editar nombres o símbolos, limpia las
-      conexiones y selecciones que ya no existan.
+      Después de editar nombres o símbolos,
+      limpia las conexiones y selecciones que ya no existan.
     </p>
-
-    @let errores = erroresValidacion;
-
-    @if (errores.length > 0) {
-      <section
-        class="errores-validacion"
-        aria-labelledby="titulo-errores"
-      >
-        <h3 id="titulo-errores">
-          Revisa la configuración
-        </h3>
-
-        <ul>
-          @for (error of errores; track $index) {
-            <li>{{ error }}</li>
-          }
-        </ul>
-      </section>
-    }
-
-    <button
-      mat-flat-button
-      type="button"
-      (click)="analizar()"
-      [disabled]="
-        cargando() ||
-        formulario.invalid ||
-        errores.length > 0
-      "
-    >
-      {{ cargando() ? 'Analizando…' : 'Analizar cadena' }}
-    </button>
   </div>
 </ng-template>

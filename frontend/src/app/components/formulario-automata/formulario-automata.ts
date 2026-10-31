@@ -1,5 +1,6 @@
 import {
   Component,
+  effect,
   input,
   output,
   signal,
@@ -25,7 +26,7 @@ import type {
   MetodoAnalisis,
 } from '../../models/automata';
 
-import { EJEMPLO_DIEZ_ESTADOS } from '../../models/ejemplo-automata';
+import { EJEMPLO_INVENTARIO } from '../../models/ejemplo-automata';
 import { validarAutomata } from '../../validators/automata';
 import { leerAutomata } from '../../validators/importar-automata';
 
@@ -45,6 +46,8 @@ import { leerAutomata } from '../../validators/importar-automata';
 })
 export class FormularioAutomata {
   readonly cargando = input(false);
+
+  readonly erroresApi = input<string[]>([]);
 
   readonly analizarSolicitado = output<AutomataEntrada>();
 
@@ -106,10 +109,28 @@ export class FormularioAutomata {
     ]),
   });
 
+  constructor() {
+    effect(() => {
+      const opciones = {
+        emitEvent: false,
+      };
+
+      if (this.cargando()) {
+        this.formulario.disable(opciones);
+        this.textoEjemplo.disable(opciones);
+      } else {
+        this.formulario.enable(opciones);
+        this.textoEjemplo.enable(opciones);
+      }
+    });
+  }
+
   protected get estadosDisponibles(): string[] {
     const estados = this.separarLista(
       this.formulario.controls.estados.value,
-    ).filter((estado) => estado.length > 0);
+    ).filter(
+      (estado) => estado.length > 0,
+    );
 
     return Array.from(new Set(estados));
   }
@@ -117,7 +138,9 @@ export class FormularioAutomata {
   protected get simbolosDisponibles(): string[] {
     const simbolos = this.separarLista(
       this.formulario.controls.alfabeto.value,
-    ).filter((simbolo) => simbolo.length > 0);
+    ).filter(
+      (simbolo) => simbolo.length > 0,
+    );
 
     return Array.from(
       new Set(simbolos.concat('ε')),
@@ -129,7 +152,9 @@ export class FormularioAutomata {
   }
 
   protected get erroresValidacion(): string[] {
-    return validarAutomata(this.construirEntrada());
+    return validarAutomata(
+      this.construirEntrada(),
+    );
   }
 
   protected generarEstados(): void {
@@ -250,8 +275,13 @@ export class FormularioAutomata {
       return;
     }
 
-    const estados = new Set(this.estadosDisponibles);
-    const simbolos = new Set(this.simbolosDisponibles);
+    const estados = new Set(
+      this.estadosDisponibles,
+    );
+
+    const simbolos = new Set(
+      this.simbolosDisponibles,
+    );
 
     const inicial =
       this.formulario.controls.estado_inicial;
@@ -277,6 +307,7 @@ export class FormularioAutomata {
       indice--
     ) {
       const transicion = this.transiciones.at(indice);
+
       const valores = transicion.getRawValue();
 
       const destinos = valores.destinos.filter(
@@ -290,7 +321,9 @@ export class FormularioAutomata {
       ) {
         this.transiciones.removeAt(indice);
       } else {
-        transicion.controls.destinos.setValue(destinos);
+        transicion.controls.destinos.setValue(
+          destinos,
+        );
       }
     }
 
@@ -346,14 +379,14 @@ export class FormularioAutomata {
     }
   }
 
-  protected cargarEjemploDiezEstados(): void {
+  protected cargarEjemploInventario(): void {
     if (this.cargando()) {
       return;
     }
 
     this.textoEjemplo.setValue(
       JSON.stringify(
-        EJEMPLO_DIEZ_ESTADOS,
+        EJEMPLO_INVENTARIO,
         null,
         2,
       ),
