@@ -14,7 +14,7 @@ export class AutomatasService {
   private readonly http = inject(HttpClient);
 
   private readonly urlAnalisis =
-    'http://127.0.0.1:8000/automatas/analizar';
+    '/automatas/analizar';
 
   analizar(entrada: AutomataEntrada): Observable<ResultadoAnalisis> {
     return this.http.post<ResultadoAnalisis>(
